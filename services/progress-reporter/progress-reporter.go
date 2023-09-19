@@ -7,16 +7,25 @@ import (
 	pb "processing-orchestrator/proto"
 )
 
-func NewProgressReporter() *ProgressReporter {
+func NewProgressReporter(evtCh chan processing_common.Watchable) *ProgressReporter {
 	return &ProgressReporter{
 		jobInfos:    map[string][]string{},
 		jobWatchers: map[string][]*BidirectionalCom{},
+		evtCh:       evtCh,
 	}
 }
 
-func (pr *ProgressReporter) Start(evtCh chan processing_common.Watchable) {
+type ProgressReporter struct {
+	// Maps id to audioskeys
+	jobInfos map[string][]string
+	// maps id to watch server
+	jobWatchers map[string][]*BidirectionalCom
+	evtCh       chan processing_common.Watchable
+}
+
+func (pr *ProgressReporter) Start() {
 	for {
-		evt := <-evtCh
+		evt := <-pr.evtCh
 		pg := evt.ToProgress()
 		watchers, ok := pr.jobWatchers[pg.JobId]
 		if !ok {

@@ -77,28 +77,33 @@ func (rp *RecordProcessor) Add(audioKeys []string, backgroundAudioKey string) (s
 func (rp *RecordProcessor) Process(job *job_store.JobState) error {
 	// Cook
 	if job.Step == processing_common.StepCooking {
+		slog.Info(fmt.Sprintf("[RecordProcessor] :: Cooking job %s", job.Id))
 		err := rp.cook(job)
 		if err != nil {
 			return err
 		}
 	}
+	slog.Info(fmt.Sprintf("[RecordProcessor] :: Finished cooking job %s", job.Id))
 
 	// Encode
 	if job.Step == processing_common.StepEncoding {
+		slog.Info(fmt.Sprintf("[RecordProcessor] :: Encoding job %s", job.Id))
 		err := rp.encode(job)
 		if err != nil {
 			return err
 		}
 	}
+	slog.Info(fmt.Sprintf("[RecordProcessor] :: Finished encoding job %s", job.Id))
 
 	// Upload
 	if job.Step == processing_common.StepUploading {
+		slog.Info(fmt.Sprintf("[RecordProcessor] :: Uploading job %s", job.Id))
 		err := rp.upload(job)
 		if err != nil {
 			return err
 		}
 	}
-
+	slog.Info(fmt.Sprintf("[RecordProcessor] :: Finished uploading job %s", job.Id))
 	return nil
 }
 

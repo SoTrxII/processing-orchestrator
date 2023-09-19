@@ -77,6 +77,7 @@ func (s *server) Start(ctx context.Context, req *pb.ProcessRequest) (*pb.Process
 		return nil, err
 	}
 	s.progressRep.AddInfo(jobId, req.DiscordAudioKeys)
+	slog.Info(fmt.Sprintf("[Server] :: Starting a new process with id '%s' and params %+v", jobId, req))
 	return &pb.ProcessResponse{Id: jobId}, nil
 }
 
@@ -94,15 +95,17 @@ func main() {
 	}
 	s := grpc.NewServer()
 	daprServer := daprd.NewServiceWithGrpcServer(lis, s)
-	processor, err := DI(daprServer, daprPort)
+	processor, reporter, err := DI(daprServer, daprPort)
 	if err != nil {
 		log.Fatalf("failed to initialize event controller: %v", err)
 	}
 	err = processor.Init()
+	go reporter.Start()
+
 	if err != nil {
 		log.Fatalf("[Main] :: Processor failed to init: %v", err)
 	}
-	pb.RegisterRecordServiceServer(s, &server{processor: processor})
+	pb.RegisterRecordServiceServer(s, &server{processor: processor, progressRep: reporter})
 	slog.Info(fmt.Sprintf("[Main] :: Starting gRPC server at %v", lis.Addr()))
 	if err := daprServer.Start(); err != nil {
 		log.Fatalf("server error: %v", err)
@@ -110,17 +113,18 @@ func main() {
 
 }
 
-func DI(subServer common.Service, daprPort int) (*record_processor.RecordProcessor, error) {
+func DI(subServer common.Service, daprPort int) (*record_processor.RecordProcessor, *progress_reporter.ProgressReporter, error) {
 	daprClient, err := makeDaprClient(daprPort, 16)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	progressCh := make(chan processing_common.Watchable, 100)
 	cook := cooker.NewCooker(daprClient, subServer, DEFAULT_PUBSUB_COMPONENT, progressCh)
 	encode := encoder.NewEncoder(daprClient, subServer, DEFAULT_PUBSUB_COMPONENT, progressCh)
 	upload := uploader.NewUploader(daprClient, DEFAULT_UPLOADER_ID)
 	store := job_store.NewJobStore(daprClient, DEFAULT_STATE_STORE_COMPONENT)
-	return record_processor.NewRecordProcessor(cook, encode, upload, store), nil
+	reporter := progress_reporter.NewProgressReporter(progressCh)
+	return record_processor.NewRecordProcessor(cook, encode, upload, store), reporter, nil
 }
 
 func makeDaprClient(port, maxRequestSizeMB int) (client.Client, error) {

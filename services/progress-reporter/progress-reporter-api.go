@@ -11,13 +11,6 @@ var steps = []string{
 	processing_common.StepUploading.ToString(),
 }
 
-type ProgressReporter struct {
-	// Maps id to audioskeys
-	jobInfos map[string][]string
-	// maps id to watch server
-	jobWatchers map[string][]*BidirectionalCom
-}
-
 type BidirectionalCom struct {
 	Data   chan *pb.ProcessingStatus
 	Canary chan bool

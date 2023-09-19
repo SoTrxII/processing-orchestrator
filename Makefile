@@ -1,4 +1,4 @@
-.PHONY: proto test
+.PHONY: proto test dapr
 proto:
 	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative proto/processor.proto
 
@@ -9,10 +9,10 @@ test:
 	go test -v ./... -covermode=atomic -coverprofile=coverage.out
 
 dapr_run:
-	dapr run --app-id=processing-orchestrator --app-port 55556 --dapr-grpc-port 50011 --resources-path ./dapr/components -- go run cmd/server.go
+	dapr run --app-id=processing-orchestrator --app-port 55556 --dapr-grpc-port 50012 --resources-path ./dapr/components -- go run cmd/server.go
 
 dapr:
-	dapr run --app-id=processing-orchestrator --app-protocol=grpc --app-port 55555 --dapr-grpc-port 50011  --resources-path ./dapr/components
+	dapr run --app-id=processing-orchestrator --app-protocol=grpc --app-port 55556 --dapr-grpc-port 50012  --resources-path ./dapr/components
 
 container:
 	docker build -t processing-orchestrator .

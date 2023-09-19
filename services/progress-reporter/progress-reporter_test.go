@@ -9,7 +9,8 @@ import (
 )
 
 func TestProgressReporter_ToStatus(t *testing.T) {
-	rep := NewProgressReporter()
+	evtCh := make(chan processing_common.Watchable, 1)
+	rep := NewProgressReporter(evtCh)
 
 	// Job with no infos
 	status := rep.toStatus(&processing_common.ServiceProgress{
@@ -62,9 +63,9 @@ func TestProgressReporter_ToStatus(t *testing.T) {
 }
 
 func TestProgressReporter_Start(t *testing.T) {
-	rep := NewProgressReporter()
 	evtCh := make(chan processing_common.Watchable, 1)
-	go rep.Start(evtCh)
+	rep := NewProgressReporter(evtCh)
+	go rep.Start()
 	evtCh <- &cooker.CookingEvent{
 		ServiceEvent: processing_common.ServiceEvent{
 			JobId: "test",
