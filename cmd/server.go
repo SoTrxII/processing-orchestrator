@@ -31,7 +31,7 @@ const (
 	// TODO :: Move these to env vars
 	DEFAULT_UPLOADER_ID           = "video-store"
 	DEFAULT_PUBSUB_COMPONENT      = "pubsub"
-	DEFAULT_STATE_STORE_COMPONENT = "state-store"
+	DEFAULT_STATE_STORE_COMPONENT = "statestore"
 )
 
 var (
