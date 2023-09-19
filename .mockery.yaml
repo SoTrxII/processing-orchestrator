@@ -1,0 +1,27 @@
+quiet: False
+disable-version-string: True
+with-expecter: True
+dir: "test-utils"
+filename: "{{.MockName}}.go"
+outpkg: test_utils
+packages:
+  processing-orchestrator/pkg/cooker:
+    interfaces:
+      CookingService:
+
+  processing-orchestrator/pkg/encoder:
+    interfaces:
+      EncodingService:
+
+  processing-orchestrator/pkg/uploader:
+    interfaces:
+      UploadingService:
+
+  processing-orchestrator/pkg/job-store:
+    interfaces:
+      JobStore:
+
+  processing-orchestrator/internal/utils:
+    interfaces:
+      Publisher:
+      Subscriber:

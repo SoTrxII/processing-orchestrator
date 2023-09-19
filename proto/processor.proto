@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+option go_package = "./processing-orchestrator";
+package processing_orchestrator;
+
+
+message WatchRequest {
+  string id = 1;
+}
+
+
+message ProcessingStatus {
+  string id = 1;
+  string error = 2;
+  repeated string stepsList = 3;
+  uint32 currentStepIndex = 4;
+  repeated string itemList = 5;
+  uint32 currentItemIndex = 6;
+  // All processing is done
+  bool done = 7;
+  // Progress as a user friendly string
+  string progress = 8;
+}
+
+message ProcessRequest {
+  repeated string discordAudioKeys = 1;
+  string backgroundAudioKey = 2;
+}
+
+message ProcessResponse {
+  string id = 1;
+}
+
+
+service RecordService {
+  rpc Start(ProcessRequest) returns (ProcessResponse) ;
+  rpc Watch(WatchRequest) returns (stream ProcessingStatus) ;
+}
