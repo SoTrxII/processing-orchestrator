@@ -10,9 +10,10 @@ import (
 )
 
 type Encoder struct {
-	subServer utils.Subscriber
-	pubClient utils.Publisher
-	component string
+	subServer    utils.Subscriber
+	pubClient    utils.Publisher
+	pubComponent string
+	subComponent string
 	// Events received from the Cooking Server
 	events chan EncodingEvent
 	// Channel to send progress to
@@ -20,14 +21,15 @@ type Encoder struct {
 	opt        *EncoderOpt
 }
 
-func NewEncoder(pubClient utils.Publisher, subServer utils.Subscriber, component string, progressCh chan processing_common.Watchable) *Encoder {
+func NewEncoder(pubClient utils.Publisher, subServer utils.Subscriber, pubComponent, subComponent string, progressCh chan processing_common.Watchable) *Encoder {
 
 	return &Encoder{
-		pubClient:  pubClient,
-		subServer:  subServer,
-		component:  component,
-		events:     make(chan EncodingEvent, 50),
-		progressCh: progressCh,
+		pubClient:    pubClient,
+		subServer:    subServer,
+		pubComponent: pubComponent,
+		subComponent: subComponent,
+		events:       make(chan EncodingEvent, 50),
+		progressCh:   progressCh,
 		opt: &EncoderOpt{
 			Extension: ".mp4",
 		},
@@ -36,7 +38,7 @@ func NewEncoder(pubClient utils.Publisher, subServer utils.Subscriber, component
 
 func (c *Encoder) subscribeTo(subServer utils.Subscriber) error {
 	err := subServer.AddTopicEventHandler(&common.Subscription{
-		PubsubName: c.component,
+		PubsubName: c.subComponent,
 		Topic:      s_Info,
 	}, c.onInfo)
 	if err != nil {
@@ -56,7 +58,7 @@ func (c *Encoder) onInfo(ctx context.Context, e *common.TopicEvent) (retry bool,
 }
 
 func (c *Encoder) Encode(jobId string, audioKeys []string, bgAudioKey string) (string, error) {
-	err := c.pubClient.PublishEvent(context.Background(), c.component, p_Start, EncodeJob{
+	err := c.pubClient.PublishEvent(context.Background(), c.pubComponent, p_Start, EncodeJob{
 		JobId:              jobId,
 		AudiosKeys:         audioKeys,
 		BackgroundAudioKey: bgAudioKey,

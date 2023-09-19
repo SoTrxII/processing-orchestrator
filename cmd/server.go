@@ -30,7 +30,8 @@ const (
 	// Dapr services app ids
 	// TODO :: Move these to env vars
 	DEFAULT_UPLOADER_ID           = "video-store"
-	DEFAULT_PUBSUB_COMPONENT      = "pubsub"
+	DEFAULT_PUB_COMPONENT         = "queue"
+	DEFAULT_SUB_COMPONENT         = "pubsub"
 	DEFAULT_STATE_STORE_COMPONENT = "statestore"
 )
 
@@ -119,8 +120,8 @@ func DI(subServer common.Service, daprPort int) (*record_processor.RecordProcess
 		return nil, nil, err
 	}
 	progressCh := make(chan processing_common.Watchable, 100)
-	cook := cooker.NewCooker(daprClient, subServer, DEFAULT_PUBSUB_COMPONENT, progressCh)
-	encode := encoder.NewEncoder(daprClient, subServer, DEFAULT_PUBSUB_COMPONENT, progressCh)
+	cook := cooker.NewCooker(daprClient, subServer, DEFAULT_PUB_COMPONENT, DEFAULT_SUB_COMPONENT, progressCh)
+	encode := encoder.NewEncoder(daprClient, subServer, DEFAULT_PUB_COMPONENT, DEFAULT_SUB_COMPONENT, progressCh)
 	upload := uploader.NewUploader(daprClient, DEFAULT_UPLOADER_ID)
 	store := job_store.NewJobStore(daprClient, DEFAULT_STATE_STORE_COMPONENT)
 	reporter := progress_reporter.NewProgressReporter(progressCh)

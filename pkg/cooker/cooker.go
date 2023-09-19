@@ -10,9 +10,10 @@ import (
 )
 
 type Cooker struct {
-	subServer utils.Subscriber
-	pubClient utils.Publisher
-	component string
+	subServer    utils.Subscriber
+	pubClient    utils.Publisher
+	pubComponent string
+	subComponent string
 	// Events received from the Cooking Server
 	events chan CookingEvent
 	// Channel to send progress to
@@ -20,14 +21,15 @@ type Cooker struct {
 	opt        *CookerOpt
 }
 
-func NewCooker(pubClient utils.Publisher, subServer utils.Subscriber, component string, progressCh chan processing_common.Watchable) *Cooker {
+func NewCooker(pubClient utils.Publisher, subServer utils.Subscriber, pubComponent, subComponent string, progressCh chan processing_common.Watchable) *Cooker {
 
 	return &Cooker{
-		pubClient:  pubClient,
-		subServer:  subServer,
-		component:  component,
-		events:     make(chan CookingEvent, 50),
-		progressCh: progressCh,
+		pubClient:    pubClient,
+		subServer:    subServer,
+		pubComponent: pubComponent,
+		subComponent: subComponent,
+		events:       make(chan CookingEvent, 50),
+		progressCh:   progressCh,
 		opt: &CookerOpt{
 			Extension: ".ogg",
 		},
@@ -36,7 +38,7 @@ func NewCooker(pubClient utils.Publisher, subServer utils.Subscriber, component 
 
 func (c *Cooker) subscribeTo(subServer utils.Subscriber) error {
 	err := subServer.AddTopicEventHandler(&common.Subscription{
-		PubsubName: c.component,
+		PubsubName: c.subComponent,
 		Topic:      s_Info,
 	}, c.onInfo)
 	if err != nil {
@@ -56,7 +58,7 @@ func (c *Cooker) onInfo(ctx context.Context, e *common.TopicEvent) (retry bool, 
 }
 
 func (c *Cooker) Cook(jobId string, recordIds []string) ([]string, error) {
-	err := c.pubClient.PublishEvent(context.Background(), c.component, p_Start, CookingJob{
+	err := c.pubClient.PublishEvent(context.Background(), c.pubComponent, p_Start, CookingJob{
 		JobId: jobId,
 		Ids:   recordIds,
 	})
