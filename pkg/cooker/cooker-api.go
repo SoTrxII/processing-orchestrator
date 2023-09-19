@@ -65,7 +65,7 @@ func (ce *CookingEvent) ToProgress() *processing_common.ServiceProgress {
 	}
 	switch ce.State {
 	case processing_common.Done:
-		pg.Progress = fmt.Sprintf("Done", ce.RecordId)
+		pg.Progress = "Done"
 	case processing_common.InProgress:
 		pg.Progress = fmt.Sprintf("%d bytes processed so far", ce.Data.TotalBytes)
 	case processing_common.Error:
