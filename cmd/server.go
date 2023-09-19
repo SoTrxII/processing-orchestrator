@@ -30,7 +30,7 @@ const (
 	// Dapr services app ids
 	// TODO :: Move these to env vars
 	DEFAULT_UPLOADER_ID           = "video-store"
-	DEFAULT_PUB_COMPONENT         = "queue"
+	DEFAULT_PUB_COMPONENT         = "message-queue"
 	DEFAULT_SUB_COMPONENT         = "pubsub"
 	DEFAULT_STATE_STORE_COMPONENT = "statestore"
 )
