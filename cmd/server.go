@@ -120,9 +120,21 @@ func DI(subServer common.Service, daprPort int) (*record_processor.RecordProcess
 		return nil, nil, err
 	}
 	progressCh := make(chan processing_common.Watchable, 100)
-	cook := cooker.NewCooker(daprClient, subServer, DEFAULT_PUB_COMPONENT, DEFAULT_SUB_COMPONENT, progressCh)
-	encode := encoder.NewEncoder(daprClient, subServer, DEFAULT_PUB_COMPONENT, DEFAULT_SUB_COMPONENT, progressCh)
-	upload := uploader.NewUploader(daprClient, DEFAULT_UPLOADER_ID)
+	cook := cooker.NewCooker(daprClient, DEFAULT_PUB_COMPONENT, DEFAULT_SUB_COMPONENT, progressCh)
+	err = cook.SubscribeTo(subServer)
+	if err != nil {
+		return nil, nil, err
+	}
+	encode := encoder.NewEncoder(daprClient, DEFAULT_PUB_COMPONENT, DEFAULT_SUB_COMPONENT, progressCh)
+	err = encode.SubscribeTo(subServer)
+	if err != nil {
+		return nil, nil, err
+	}
+	upload := uploader.NewUploader(daprClient, DEFAULT_UPLOADER_ID, DEFAULT_SUB_COMPONENT, progressCh)
+	err = upload.SubscribeTo(subServer)
+	if err != nil {
+		return nil, nil, err
+	}
 	store := job_store.NewJobStore(daprClient, DEFAULT_STATE_STORE_COMPONENT)
 	reporter := progress_reporter.NewProgressReporter(progressCh)
 	return record_processor.NewRecordProcessor(cook, encode, upload, store), reporter, nil
