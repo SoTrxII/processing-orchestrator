@@ -10,7 +10,6 @@ import (
 )
 
 type Encoder struct {
-	subServer    utils.Subscriber
 	pubClient    utils.Publisher
 	pubComponent string
 	subComponent string
@@ -21,11 +20,10 @@ type Encoder struct {
 	opt        *EncoderOpt
 }
 
-func NewEncoder(pubClient utils.Publisher, subServer utils.Subscriber, pubComponent, subComponent string, progressCh chan processing_common.Watchable) *Encoder {
+func NewEncoder(pubClient utils.Publisher, pubComponent, subComponent string, progressCh chan processing_common.Watchable) *Encoder {
 
 	return &Encoder{
 		pubClient:    pubClient,
-		subServer:    subServer,
 		pubComponent: pubComponent,
 		subComponent: subComponent,
 		events:       make(chan EncodingEvent, 50),
@@ -36,7 +34,7 @@ func NewEncoder(pubClient utils.Publisher, subServer utils.Subscriber, pubCompon
 	}
 }
 
-func (c *Encoder) subscribeTo(subServer utils.Subscriber) error {
+func (c *Encoder) SubscribeTo(subServer utils.Subscriber) error {
 	err := subServer.AddTopicEventHandler(&common.Subscription{
 		PubsubName: c.subComponent,
 		Topic:      s_Info,

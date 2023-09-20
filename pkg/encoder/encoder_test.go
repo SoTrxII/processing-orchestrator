@@ -17,7 +17,7 @@ func setup(t *testing.T) *Encoder {
 	sub := test_utils.MockSubscriber{}
 	sub.On("AddTopicEventHandler", mock.Anything, mock.Anything).Return(nil)
 	pub.On("PublishEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	return NewEncoder(&pub, &sub, "test", progressCh)
+	return NewEncoder(&pub, "test", "test", progressCh)
 }
 
 func TestEncoder_Start(t *testing.T) {
