@@ -14,10 +14,8 @@ import (
 func setup() *Cooker {
 	progressCh := make(chan processing_common.Watchable, 100)
 	pub := test_utils.MockPublisher{}
-	sub := test_utils.MockSubscriber{}
-	sub.On("AddTopicEventHandler", mock.Anything, mock.Anything).Return(nil)
 	pub.On("PublishEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	return NewCooker(&pub, &sub, "test", progressCh)
+	return NewCooker(&pub, "test", "test", progressCh)
 }
 
 func TestCooker_Start_OneRecord_CustomExt(t *testing.T) {

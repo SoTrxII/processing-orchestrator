@@ -10,7 +10,6 @@ import (
 )
 
 type Cooker struct {
-	subServer    utils.Subscriber
 	pubClient    utils.Publisher
 	pubComponent string
 	subComponent string
@@ -21,11 +20,10 @@ type Cooker struct {
 	opt        *CookerOpt
 }
 
-func NewCooker(pubClient utils.Publisher, subServer utils.Subscriber, pubComponent, subComponent string, progressCh chan processing_common.Watchable) *Cooker {
+func NewCooker(pubClient utils.Publisher, pubComponent, subComponent string, progressCh chan processing_common.Watchable) *Cooker {
 
 	return &Cooker{
 		pubClient:    pubClient,
-		subServer:    subServer,
 		pubComponent: pubComponent,
 		subComponent: subComponent,
 		events:       make(chan CookingEvent, 50),
@@ -36,7 +34,7 @@ func NewCooker(pubClient utils.Publisher, subServer utils.Subscriber, pubCompone
 	}
 }
 
-func (c *Cooker) subscribeTo(subServer utils.Subscriber) error {
+func (c *Cooker) SubscribeTo(subServer utils.Subscriber) error {
 	err := subServer.AddTopicEventHandler(&common.Subscription{
 		PubsubName: c.subComponent,
 		Topic:      s_Info,
