@@ -32,7 +32,7 @@ message ProcessResponse {
 }
 
 
-service RecordService {
+service Processor {
   rpc Start(ProcessRequest) returns (ProcessResponse) ;
   rpc Watch(WatchRequest) returns (stream ProcessingStatus) ;
 }
