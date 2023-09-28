@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"github.com/dapr/go-sdk/client"
 	"github.com/dapr/go-sdk/service/common"
@@ -26,6 +25,7 @@ import (
 )
 
 const (
+	DEFAULT_PORT      = 55556
 	DEFAULT_DAPR_PORT = 50001
 	// Dapr services app ids
 	// TODO :: Move these to env vars
@@ -33,10 +33,6 @@ const (
 	DEFAULT_PUB_COMPONENT         = "message-queue"
 	DEFAULT_SUB_COMPONENT         = "pubsub"
 	DEFAULT_STATE_STORE_COMPONENT = "statestore"
-)
-
-var (
-	port = flag.Int("port", 55556, "The server port")
 )
 
 type server struct {
@@ -83,20 +79,17 @@ func (s *server) Start(ctx context.Context, req *pb.ProcessRequest) (*pb.Process
 }
 
 func main() {
-	daprPort := DEFAULT_DAPR_PORT
-	if envPort, err := strconv.ParseInt(os.Getenv("DAPR_GRPC_PORT"), 10, 32); err == nil && envPort != 0 {
-		daprPort = int(envPort)
-	}
-	slog.Info("[Main] :: Dapr port is " + strconv.Itoa(daprPort))
+	pEnv := parseEnv()
+	slog.Info("[Main] :: Dapr port is " + strconv.Itoa(pEnv.daprGrpcPort))
 
 	// Strat the gRPC Server
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", pEnv.serverPort))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
 	daprServer := daprd.NewServiceWithGrpcServer(lis, s)
-	processor, reporter, err := DI(daprServer, daprPort)
+	processor, reporter, err := DI(daprServer, pEnv)
 	if err != nil {
 		log.Fatalf("failed to initialize event controller: %v", err)
 	}
@@ -114,28 +107,71 @@ func main() {
 
 }
 
-func DI(subServer common.Service, daprPort int) (*record_processor.RecordProcessor, *progress_reporter.ProgressReporter, error) {
-	daprClient, err := makeDaprClient(daprPort, 16)
+type env struct {
+	// Port to connect to Dapr sidecar
+	daprGrpcPort int
+	// Port the app is listening on
+	serverPort int
+	// Dapr components ids
+	daprCpnUploader string
+	daprCpnPub      string
+	daprCpnSub      string
+	daprCpnState    string
+}
+
+func parseEnv() *env {
+	pEnv := env{
+		serverPort:      DEFAULT_PORT,
+		daprGrpcPort:    DEFAULT_DAPR_PORT,
+		daprCpnUploader: DEFAULT_UPLOADER_ID,
+		daprCpnPub:      DEFAULT_PUB_COMPONENT,
+		daprCpnSub:      DEFAULT_SUB_COMPONENT,
+		daprCpnState:    DEFAULT_STATE_STORE_COMPONENT,
+	}
+
+	if envPort, err := strconv.ParseInt(os.Getenv("DAPR_GRPC_PORT"), 10, 32); err == nil && envPort != 0 {
+		pEnv.daprGrpcPort = int(envPort)
+	}
+	if envPort, err := strconv.ParseInt(os.Getenv("SERVER_PORT"), 10, 32); err == nil && envPort != 0 {
+		pEnv.serverPort = int(envPort)
+	}
+	if id, isDefined := os.LookupEnv("UPLOADER_NAME"); isDefined && id != "" {
+		pEnv.daprCpnUploader = id
+	}
+	if id, isDefined := os.LookupEnv("PUBSUB_NAME"); isDefined && id != "" {
+		pEnv.daprCpnPub = id
+	}
+	if id, isDefined := os.LookupEnv("SUB_NAME"); isDefined && id != "" {
+		pEnv.daprCpnSub = id
+	}
+	if id, isDefined := os.LookupEnv("STORE_NAME"); isDefined && id != "" {
+		pEnv.daprCpnState = id
+	}
+	return &pEnv
+}
+
+func DI(subServer common.Service, env *env) (*record_processor.RecordProcessor, *progress_reporter.ProgressReporter, error) {
+	daprClient, err := makeDaprClient(env.daprGrpcPort, 16)
 	if err != nil {
 		return nil, nil, err
 	}
 	progressCh := make(chan processing_common.Watchable, 100)
-	cook := cooker.NewCooker(daprClient, DEFAULT_PUB_COMPONENT, DEFAULT_SUB_COMPONENT, progressCh)
+	cook := cooker.NewCooker(daprClient, env.daprCpnPub, env.daprCpnSub, progressCh)
 	err = cook.SubscribeTo(subServer)
 	if err != nil {
 		return nil, nil, err
 	}
-	encode := encoder.NewEncoder(daprClient, DEFAULT_PUB_COMPONENT, DEFAULT_SUB_COMPONENT, progressCh)
+	encode := encoder.NewEncoder(daprClient, env.daprCpnPub, env.daprCpnSub, progressCh)
 	err = encode.SubscribeTo(subServer)
 	if err != nil {
 		return nil, nil, err
 	}
-	upload := uploader.NewUploader(daprClient, DEFAULT_UPLOADER_ID, DEFAULT_SUB_COMPONENT, progressCh)
+	upload := uploader.NewUploader(daprClient, env.daprCpnUploader, env.daprCpnSub, progressCh)
 	err = upload.SubscribeTo(subServer)
 	if err != nil {
 		return nil, nil, err
 	}
-	store := job_store.NewJobStore(daprClient, DEFAULT_STATE_STORE_COMPONENT)
+	store := job_store.NewJobStore(daprClient, env.daprCpnState)
 	reporter := progress_reporter.NewProgressReporter(progressCh)
 	return record_processor.NewRecordProcessor(cook, encode, upload, store), reporter, nil
 }
