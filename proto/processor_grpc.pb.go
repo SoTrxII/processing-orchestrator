@@ -18,37 +18,37 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
-// RecordServiceClient is the client API for RecordService service.
+// ProcessorClient is the client API for Processor service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type RecordServiceClient interface {
+type ProcessorClient interface {
 	Start(ctx context.Context, in *ProcessRequest, opts ...grpc.CallOption) (*ProcessResponse, error)
-	Watch(ctx context.Context, in *WatchRequest, opts ...grpc.CallOption) (RecordService_WatchClient, error)
+	Watch(ctx context.Context, in *WatchRequest, opts ...grpc.CallOption) (Processor_WatchClient, error)
 }
 
-type recordServiceClient struct {
+type processorClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewRecordServiceClient(cc grpc.ClientConnInterface) RecordServiceClient {
-	return &recordServiceClient{cc}
+func NewProcessorClient(cc grpc.ClientConnInterface) ProcessorClient {
+	return &processorClient{cc}
 }
 
-func (c *recordServiceClient) Start(ctx context.Context, in *ProcessRequest, opts ...grpc.CallOption) (*ProcessResponse, error) {
+func (c *processorClient) Start(ctx context.Context, in *ProcessRequest, opts ...grpc.CallOption) (*ProcessResponse, error) {
 	out := new(ProcessResponse)
-	err := c.cc.Invoke(ctx, "/processing_orchestrator.RecordService/Start", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/processing_orchestrator.Processor/Start", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *recordServiceClient) Watch(ctx context.Context, in *WatchRequest, opts ...grpc.CallOption) (RecordService_WatchClient, error) {
-	stream, err := c.cc.NewStream(ctx, &RecordService_ServiceDesc.Streams[0], "/processing_orchestrator.RecordService/Watch", opts...)
+func (c *processorClient) Watch(ctx context.Context, in *WatchRequest, opts ...grpc.CallOption) (Processor_WatchClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Processor_ServiceDesc.Streams[0], "/processing_orchestrator.Processor/Watch", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &recordServiceWatchClient{stream}
+	x := &processorWatchClient{stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -58,16 +58,16 @@ func (c *recordServiceClient) Watch(ctx context.Context, in *WatchRequest, opts 
 	return x, nil
 }
 
-type RecordService_WatchClient interface {
+type Processor_WatchClient interface {
 	Recv() (*ProcessingStatus, error)
 	grpc.ClientStream
 }
 
-type recordServiceWatchClient struct {
+type processorWatchClient struct {
 	grpc.ClientStream
 }
 
-func (x *recordServiceWatchClient) Recv() (*ProcessingStatus, error) {
+func (x *processorWatchClient) Recv() (*ProcessingStatus, error) {
 	m := new(ProcessingStatus)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -75,93 +75,93 @@ func (x *recordServiceWatchClient) Recv() (*ProcessingStatus, error) {
 	return m, nil
 }
 
-// RecordServiceServer is the server API for RecordService service.
-// All implementations must embed UnimplementedRecordServiceServer
+// ProcessorServer is the server API for Processor service.
+// All implementations must embed UnimplementedProcessorServer
 // for forward compatibility
-type RecordServiceServer interface {
+type ProcessorServer interface {
 	Start(context.Context, *ProcessRequest) (*ProcessResponse, error)
-	Watch(*WatchRequest, RecordService_WatchServer) error
-	mustEmbedUnimplementedRecordServiceServer()
+	Watch(*WatchRequest, Processor_WatchServer) error
+	mustEmbedUnimplementedProcessorServer()
 }
 
-// UnimplementedRecordServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedRecordServiceServer struct {
+// UnimplementedProcessorServer must be embedded to have forward compatible implementations.
+type UnimplementedProcessorServer struct {
 }
 
-func (UnimplementedRecordServiceServer) Start(context.Context, *ProcessRequest) (*ProcessResponse, error) {
+func (UnimplementedProcessorServer) Start(context.Context, *ProcessRequest) (*ProcessResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Start not implemented")
 }
-func (UnimplementedRecordServiceServer) Watch(*WatchRequest, RecordService_WatchServer) error {
+func (UnimplementedProcessorServer) Watch(*WatchRequest, Processor_WatchServer) error {
 	return status.Errorf(codes.Unimplemented, "method Watch not implemented")
 }
-func (UnimplementedRecordServiceServer) mustEmbedUnimplementedRecordServiceServer() {}
+func (UnimplementedProcessorServer) mustEmbedUnimplementedProcessorServer() {}
 
-// UnsafeRecordServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to RecordServiceServer will
+// UnsafeProcessorServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ProcessorServer will
 // result in compilation errors.
-type UnsafeRecordServiceServer interface {
-	mustEmbedUnimplementedRecordServiceServer()
+type UnsafeProcessorServer interface {
+	mustEmbedUnimplementedProcessorServer()
 }
 
-func RegisterRecordServiceServer(s grpc.ServiceRegistrar, srv RecordServiceServer) {
-	s.RegisterService(&RecordService_ServiceDesc, srv)
+func RegisterProcessorServer(s grpc.ServiceRegistrar, srv ProcessorServer) {
+	s.RegisterService(&Processor_ServiceDesc, srv)
 }
 
-func _RecordService_Start_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Processor_Start_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ProcessRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RecordServiceServer).Start(ctx, in)
+		return srv.(ProcessorServer).Start(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/processing_orchestrator.RecordService/Start",
+		FullMethod: "/processing_orchestrator.Processor/Start",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RecordServiceServer).Start(ctx, req.(*ProcessRequest))
+		return srv.(ProcessorServer).Start(ctx, req.(*ProcessRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _RecordService_Watch_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _Processor_Watch_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(WatchRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(RecordServiceServer).Watch(m, &recordServiceWatchServer{stream})
+	return srv.(ProcessorServer).Watch(m, &processorWatchServer{stream})
 }
 
-type RecordService_WatchServer interface {
+type Processor_WatchServer interface {
 	Send(*ProcessingStatus) error
 	grpc.ServerStream
 }
 
-type recordServiceWatchServer struct {
+type processorWatchServer struct {
 	grpc.ServerStream
 }
 
-func (x *recordServiceWatchServer) Send(m *ProcessingStatus) error {
+func (x *processorWatchServer) Send(m *ProcessingStatus) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-// RecordService_ServiceDesc is the grpc.ServiceDesc for RecordService service.
+// Processor_ServiceDesc is the grpc.ServiceDesc for Processor service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var RecordService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "processing_orchestrator.RecordService",
-	HandlerType: (*RecordServiceServer)(nil),
+var Processor_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "processing_orchestrator.Processor",
+	HandlerType: (*ProcessorServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "Start",
-			Handler:    _RecordService_Start_Handler,
+			Handler:    _Processor_Start_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "Watch",
-			Handler:       _RecordService_Watch_Handler,
+			Handler:       _Processor_Watch_Handler,
 			ServerStreams: true,
 		},
 	},

@@ -36,12 +36,12 @@ const (
 )
 
 type server struct {
-	pb.UnimplementedRecordServiceServer
+	pb.UnimplementedProcessorServer
 	processor   *record_processor.RecordProcessor
 	progressRep *progress_reporter.ProgressReporter
 }
 
-func (s *server) Watch(req *pb.WatchRequest, stream pb.RecordService_WatchServer) error {
+func (s *server) Watch(req *pb.WatchRequest, stream pb.Processor_WatchServer) error {
 	com := &progress_reporter.BidirectionalCom{
 		Data:   make(chan *pb.ProcessingStatus, 20),
 		Canary: make(chan bool, 1),
@@ -99,7 +99,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("[Main] :: Processor failed to init: %v", err)
 	}
-	pb.RegisterRecordServiceServer(s, &server{processor: processor, progressRep: reporter})
+	pb.RegisterProcessorServer(s, &server{processor: processor, progressRep: reporter})
 	slog.Info(fmt.Sprintf("[Main] :: Starting gRPC server at %v", lis.Addr()))
 	if err := daprServer.Start(); err != nil {
 		log.Fatalf("server error: %v", err)
