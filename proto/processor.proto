@@ -20,6 +20,8 @@ message ProcessingStatus {
   bool done = 7;
   // Progress as a user friendly string
   string progress = 8;
+  // Final video link, only available when done is true
+  string link = 9;
 }
 
 message ProcessRequest {

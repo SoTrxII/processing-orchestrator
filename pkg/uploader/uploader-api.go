@@ -88,8 +88,8 @@ func (e *UploadEvent) ToProgress() *processing_common.ServiceProgress {
 	}
 	switch e.State {
 	case processing_common.Done:
-		// TODO : Add a data field to the progress
 		pg.Progress = "Done"
+		pg.Link = e.Data.Link
 	case processing_common.Error:
 		// TODO, Propagate error from upstream (not sent yet)
 		pg.Error = fmt.Errorf("Unkown error")

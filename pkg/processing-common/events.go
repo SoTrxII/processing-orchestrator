@@ -47,4 +47,5 @@ type ServiceProgress struct {
 	CurrentItem string
 	Error       error
 	Progress    string
+	Link        string
 }
