@@ -64,6 +64,7 @@ func (pr *ProgressReporter) toStatus(pg *processing_common.ServiceProgress) *pb.
 		CurrentItemIndex: 0,
 		Done:             false,
 		Progress:         pg.Progress,
+		Link:             pg.Link,
 	}
 
 	switch pg.Step {
@@ -82,10 +83,10 @@ func (pr *ProgressReporter) toStatus(pg *processing_common.ServiceProgress) *pb.
 		}
 
 	case processing_common.StepEncoding:
-		pb.ItemList = []string{"video"}
+		pb.ItemList = []string{"videoEnc"}
 		pb.CurrentItemIndex = 0
 	case processing_common.StepUploading:
-		pb.ItemList = []string{"video"}
+		pb.ItemList = []string{"videoUp"}
 		pb.CurrentItemIndex = 0
 	case processing_common.StepDone:
 		pb.Done = true

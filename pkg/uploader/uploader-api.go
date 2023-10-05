@@ -81,7 +81,7 @@ type UploadEvent struct {
 func (e *UploadEvent) ToProgress() *processing_common.ServiceProgress {
 	pg := processing_common.ServiceProgress{
 		JobId:       e.JobId,
-		Step:        processing_common.StepEncoding,
+		Step:        processing_common.StepUploading,
 		CurrentItem: "video",
 		Error:       nil,
 		Progress:    "",
