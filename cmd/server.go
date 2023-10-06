@@ -173,7 +173,7 @@ func DI(subServer common.Service, env *env) (*record_processor.RecordProcessor, 
 	}
 	store := job_store.NewJobStore(daprClient, env.daprCpnState)
 	reporter := progress_reporter.NewProgressReporter(progressCh)
-	return record_processor.NewRecordProcessor(cook, encode, upload, store), reporter, nil
+	return record_processor.NewRecordProcessor(cook, encode, upload, progressCh, store), reporter, nil
 }
 
 func makeDaprClient(port, maxRequestSizeMB int) (client.Client, error) {

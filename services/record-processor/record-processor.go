@@ -12,18 +12,20 @@ import (
 )
 
 type RecordProcessor struct {
-	cooker   cooker.CookingService
-	encoder  encoder.EncodingService
-	uploader uploader.UploadingService
-	store    job_store.JobStore
+	cooker     cooker.CookingService
+	encoder    encoder.EncodingService
+	uploader   uploader.UploadingService
+	progressCh chan processing_common.Watchable
+	store      job_store.JobStore
 }
 
-func NewRecordProcessor(cooker cooker.CookingService, encoder encoder.EncodingService, uploader uploader.UploadingService, store job_store.JobStore) *RecordProcessor {
+func NewRecordProcessor(cooker cooker.CookingService, encoder encoder.EncodingService, uploader uploader.UploadingService, progressCh chan processing_common.Watchable, store job_store.JobStore) *RecordProcessor {
 	return &RecordProcessor{
-		cooker:   cooker,
-		encoder:  encoder,
-		uploader: uploader,
-		store:    store,
+		cooker:     cooker,
+		encoder:    encoder,
+		uploader:   uploader,
+		progressCh: progressCh,
+		store:      store,
 	}
 }
 
@@ -104,6 +106,22 @@ func (rp *RecordProcessor) Process(job *job_store.JobState) error {
 		}
 	}
 	slog.Info(fmt.Sprintf("[RecordProcessor] :: Finished uploading job %s", job.Id))
+
+	if job.Step != processing_common.StepDone {
+		return fmt.Errorf("job %s has a unsupported Step '%d'", job.Id, job.Step)
+	}
+
+	rp.progressCh <- &processing_common.DoneEvent{
+		ServiceEvent: processing_common.ServiceEvent{
+			JobId: job.Id,
+			State: processing_common.Done,
+		},
+		Data: processing_common.DoneData{
+			Link: job.VideoLink,
+		},
+	}
+	slog.Info(fmt.Sprintf("[RecordProcessor] :: Processing done for job %s", job.Id))
+
 	return nil
 }
 
@@ -142,12 +160,11 @@ func (rp *RecordProcessor) upload(job *job_store.JobState) error {
 		Title:       "test",
 		Visibility:  uploader.Unlisted,
 	})
-
-	// TODO :: Do something with the video
-	_ = vid
 	if err != nil {
 		return err
 	}
+
+	job.VideoLink = vid.WatchPrefix + vid.Id
 	job.Step = processing_common.StepDone
 	err = rp.store.Upsert(job)
 	if err != nil {

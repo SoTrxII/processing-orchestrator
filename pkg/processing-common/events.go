@@ -49,3 +49,24 @@ type ServiceProgress struct {
 	Progress    string
 	Link        string
 }
+
+type DoneData struct {
+	Link string `json:"link"`
+}
+
+type DoneEvent struct {
+	ServiceEvent
+	Data DoneData `json:"data"`
+}
+
+func (e *DoneEvent) ToProgress() *ServiceProgress {
+	pg := ServiceProgress{
+		JobId:       e.JobId,
+		Step:        StepDone,
+		CurrentItem: "",
+		Error:       nil,
+		Progress:    "",
+		Link:        e.Data.Link,
+	}
+	return &pg
+}

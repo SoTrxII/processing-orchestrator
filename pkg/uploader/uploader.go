@@ -97,15 +97,5 @@ func (u *Uploader) Upload(jobId, storageKey string, opt *VideoOpt) (*Video, erro
 	if err != nil {
 		return nil, err
 	}
-	// Custom done event with video properties
-	u.progressCh <- &UploadEvent{
-		ServiceEvent: processing_common.ServiceEvent{
-			JobId: jobId,
-			State: processing_common.Done,
-		},
-		Data: UploadData{
-			Link: video.WatchPrefix + video.Id,
-		},
-	}
 	return &video, nil
 }

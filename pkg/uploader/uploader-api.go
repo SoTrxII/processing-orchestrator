@@ -70,8 +70,6 @@ type UploadData struct {
 	Total int64 `json:"total"`
 	/** Error message if any */
 	Message string `json:"message"`
-	/** Video link */
-	Link string `json:"link"`
 }
 type UploadEvent struct {
 	processing_common.ServiceEvent
@@ -89,7 +87,6 @@ func (e *UploadEvent) ToProgress() *processing_common.ServiceProgress {
 	switch e.State {
 	case processing_common.Done:
 		pg.Progress = "Done"
-		pg.Link = e.Data.Link
 	case processing_common.Error:
 		// TODO, Propagate error from upstream (not sent yet)
 		pg.Error = fmt.Errorf("Unkown error")

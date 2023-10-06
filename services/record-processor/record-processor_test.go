@@ -6,24 +6,19 @@ import (
 	"github.com/stretchr/testify/mock"
 	job_store "processing-orchestrator/pkg/job-store"
 	processing_common "processing-orchestrator/pkg/processing-common"
+	"processing-orchestrator/pkg/uploader"
 	test_utils "processing-orchestrator/test-utils"
 	"testing"
+	"time"
 )
-
-func setup(t *testing.T) *RecordProcessor {
-	mockCooker := &test_utils.MockCookingService{}
-	mockEncoder := &test_utils.MockEncodingService{}
-	mockUploader := &test_utils.MockUploadingService{}
-	mockStore := &test_utils.MockJobStore{}
-	return NewRecordProcessor(mockCooker, mockEncoder, mockUploader, mockStore)
-}
 
 func TestRecordProcessor_Process_ErrorDuringCooking(t *testing.T) {
 	mockCooker := &test_utils.MockCookingService{}
 	mockEncoder := &test_utils.MockEncodingService{}
 	mockUploader := &test_utils.MockUploadingService{}
+	evtCh := make(chan processing_common.Watchable, 1)
 	mockStore := &test_utils.MockJobStore{}
-	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, mockStore)
+	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore)
 
 	mockCooker.EXPECT().Cook(mock.Anything, mock.Anything).Return(nil, fmt.Errorf("test"))
 	job := &job_store.JobState{
@@ -42,8 +37,9 @@ func TestRecordProcessor_Process_ErrorDuringEncoding(t *testing.T) {
 	mockCooker := &test_utils.MockCookingService{}
 	mockEncoder := &test_utils.MockEncodingService{}
 	mockUploader := &test_utils.MockUploadingService{}
+	evtCh := make(chan processing_common.Watchable, 1)
 	mockStore := &test_utils.MockJobStore{}
-	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, mockStore)
+	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore)
 
 	mockCooker.EXPECT().Cook(mock.Anything, mock.Anything).Return([]string{"cooked"}, nil)
 	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
@@ -64,8 +60,9 @@ func TestRecordProcessor_Process_ErrorDuringUploading(t *testing.T) {
 	mockCooker := &test_utils.MockCookingService{}
 	mockEncoder := &test_utils.MockEncodingService{}
 	mockUploader := &test_utils.MockUploadingService{}
+	evtCh := make(chan processing_common.Watchable, 1)
 	mockStore := &test_utils.MockJobStore{}
-	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, mockStore)
+	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore)
 
 	mockCooker.EXPECT().Cook(mock.Anything, mock.Anything).Return([]string{"cooked"}, nil)
 	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
@@ -84,18 +81,28 @@ func TestRecordProcessor_Process_ErrorDuringUploading(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestRecordProcessor_Process(t *testing.T) {
+func TestRecordProcessor_ProcessWhole(t *testing.T) {
 	mockCooker := &test_utils.MockCookingService{}
 	mockEncoder := &test_utils.MockEncodingService{}
 	mockUploader := &test_utils.MockUploadingService{}
+	evtCh := make(chan processing_common.Watchable, 1)
 	mockStore := &test_utils.MockJobStore{}
-	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, mockStore)
+	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore)
 
 	mockCooker.EXPECT().Cook(mock.Anything, mock.Anything).Return([]string{"cooked"}, nil)
 	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
 	mockEncoder.EXPECT().Encode(mock.Anything, mock.Anything, mock.Anything).Return("video", nil)
 	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
-	mockUploader.EXPECT().Upload(mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+	mockUploader.EXPECT().Upload(mock.Anything, mock.Anything, mock.Anything).Return(&uploader.Video{
+		Id:           "fix",
+		Title:        "",
+		Description:  "",
+		CreatedAt:    time.Time{},
+		Duration:     0,
+		Visibility:   "",
+		ThumbnailUrl: "",
+		WatchPrefix:  "pre",
+	}, nil)
 	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
 	job := &job_store.JobState{
 		Id:                 "test",
@@ -106,5 +113,14 @@ func TestRecordProcessor_Process(t *testing.T) {
 		VideoKey:           "",
 	}
 	err := rp.Process(job)
+	select {
+	case evt := <-evtCh:
+		pg := evt.ToProgress()
+		assert.Equal(t, processing_common.StepDone, pg.Step)
+		assert.Equal(t, "prefix", pg.Link)
+	case <-time.After(1 * time.Second):
+		// Event not received
+		t.Fail()
+	}
 	assert.NoError(t, err)
 }
