@@ -2,6 +2,7 @@ package cooker
 
 import (
 	"fmt"
+	"processing-orchestrator/internal/utils"
 	processing_common "processing-orchestrator/pkg/processing-common"
 )
 
@@ -67,7 +68,7 @@ func (ce *CookingEvent) ToProgress() *processing_common.ServiceProgress {
 	case processing_common.Done:
 		pg.Progress = "Done"
 	case processing_common.InProgress:
-		pg.Progress = fmt.Sprintf("%d bytes processed so far", ce.Data.TotalBytes)
+		pg.Progress = fmt.Sprintf("%s processed", utils.FormatSize(uint(ce.Data.TotalBytes)))
 	case processing_common.Error:
 		pg.Error = fmt.Errorf(ce.Data.Message)
 	default:
