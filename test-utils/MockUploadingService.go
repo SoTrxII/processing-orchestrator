@@ -3,6 +3,7 @@
 package test_utils
 
 import (
+	processing_common "processing-orchestrator/pkg/processing-common"
 	uploader "processing-orchestrator/pkg/uploader"
 
 	mock "github.com/stretchr/testify/mock"
@@ -22,15 +23,15 @@ func (_m *MockUploadingService) EXPECT() *MockUploadingService_Expecter {
 }
 
 // Upload provides a mock function with given fields: jobId, storageKey, opt
-func (_m *MockUploadingService) Upload(jobId string, storageKey string, opt *uploader.VideoOpt) (*uploader.Video, error) {
+func (_m *MockUploadingService) Upload(jobId string, storageKey string, opt *processing_common.VideoOpt) (*uploader.Video, error) {
 	ret := _m.Called(jobId, storageKey, opt)
 
 	var r0 *uploader.Video
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string, string, *uploader.VideoOpt) (*uploader.Video, error)); ok {
+	if rf, ok := ret.Get(0).(func(string, string, *processing_common.VideoOpt) (*uploader.Video, error)); ok {
 		return rf(jobId, storageKey, opt)
 	}
-	if rf, ok := ret.Get(0).(func(string, string, *uploader.VideoOpt) *uploader.Video); ok {
+	if rf, ok := ret.Get(0).(func(string, string, *processing_common.VideoOpt) *uploader.Video); ok {
 		r0 = rf(jobId, storageKey, opt)
 	} else {
 		if ret.Get(0) != nil {
@@ -38,7 +39,7 @@ func (_m *MockUploadingService) Upload(jobId string, storageKey string, opt *upl
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(string, string, *uploader.VideoOpt) error); ok {
+	if rf, ok := ret.Get(1).(func(string, string, *processing_common.VideoOpt) error); ok {
 		r1 = rf(jobId, storageKey, opt)
 	} else {
 		r1 = ret.Error(1)
@@ -55,14 +56,14 @@ type MockUploadingService_Upload_Call struct {
 // Upload is a helper method to define mock.On call
 //   - jobId string
 //   - storageKey string
-//   - opt *uploader.VideoOpt
+//   - opt *processing_common.VideoOpt
 func (_e *MockUploadingService_Expecter) Upload(jobId interface{}, storageKey interface{}, opt interface{}) *MockUploadingService_Upload_Call {
 	return &MockUploadingService_Upload_Call{Call: _e.mock.On("Upload", jobId, storageKey, opt)}
 }
 
-func (_c *MockUploadingService_Upload_Call) Run(run func(jobId string, storageKey string, opt *uploader.VideoOpt)) *MockUploadingService_Upload_Call {
+func (_c *MockUploadingService_Upload_Call) Run(run func(jobId string, storageKey string, opt *processing_common.VideoOpt)) *MockUploadingService_Upload_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(string), args[2].(*uploader.VideoOpt))
+		run(args[0].(string), args[1].(string), args[2].(*processing_common.VideoOpt))
 	})
 	return _c
 }
@@ -72,7 +73,7 @@ func (_c *MockUploadingService_Upload_Call) Return(_a0 *uploader.Video, _a1 erro
 	return _c
 }
 
-func (_c *MockUploadingService_Upload_Call) RunAndReturn(run func(string, string, *uploader.VideoOpt) (*uploader.Video, error)) *MockUploadingService_Upload_Call {
+func (_c *MockUploadingService_Upload_Call) RunAndReturn(run func(string, string, *processing_common.VideoOpt) (*uploader.Video, error)) *MockUploadingService_Upload_Call {
 	_c.Call.Return(run)
 	return _c
 }

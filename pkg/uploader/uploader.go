@@ -70,7 +70,7 @@ Loop:
 	}
 }
 
-func (u *Uploader) Upload(jobId, storageKey string, opt *VideoOpt) (*Video, error) {
+func (u *Uploader) Upload(jobId, storageKey string, opt *processing_common.VideoOpt) (*Video, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	// So even if an error happen, the goroutine will be cleaned up
 	defer cancel()

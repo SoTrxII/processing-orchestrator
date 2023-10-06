@@ -63,7 +63,6 @@ type EncodingData struct {
 	// Only set if the state is "error"
 	Message string `json:"message"`
 }
-
 type EncodingEvent struct {
 	processing_common.ServiceEvent
 	Data EncodingData `json:"data"`

@@ -33,8 +33,25 @@ message ProcessResponse {
   string id = 1;
 }
 
+enum Visibility {
+  PRIVATE = 0;
+  UNLISTED = 1;
+  PUBLIC = 2;
+  UNKNOWN = 3;
+}
+message UpdateRequest {
+  string id = 1;
+  string vidTitle = 2;
+  string vidDesc = 3;
+  Visibility vidVisibility = 4;
+}
+
+message UpdateResponse {
+  string id = 1;
+}
 
 service Processor {
   rpc Start(ProcessRequest) returns (ProcessResponse) ;
   rpc Watch(WatchRequest) returns (stream ProcessingStatus) ;
+  rpc UpdateInfo(UpdateRequest) returns (UpdateResponse);
 }

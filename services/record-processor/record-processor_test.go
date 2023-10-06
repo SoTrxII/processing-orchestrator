@@ -124,3 +124,31 @@ func TestRecordProcessor_ProcessWhole(t *testing.T) {
 	}
 	assert.NoError(t, err)
 }
+
+func TestRecordProcessor_UpdateInfos(t *testing.T) {
+	mockCooker := &test_utils.MockCookingService{}
+	mockEncoder := &test_utils.MockEncodingService{}
+	mockUploader := &test_utils.MockUploadingService{}
+	evtCh := make(chan processing_common.Watchable, 1)
+	mockStore := &test_utils.MockJobStore{}
+	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore)
+
+	mockStore.EXPECT().Get(mock.Anything).Return(&job_store.JobState{
+		Id:                 "test",
+		Step:               processing_common.StepCooking,
+		RawAudioKeys:       []string{"raw"},
+		CookedAudioKeys:    nil,
+		BackgroundAudioKey: "",
+		VideoKey:           "",
+	}, nil)
+	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
+	err := rp.UpdateInfos("test", processing_common.UserInput{
+		Vid: processing_common.VideoOpt{
+			Description: "desc",
+			Title:       "title",
+			Visibility:  processing_common.Public,
+		},
+	})
+	assert.NoError(t, err)
+	mockStore.AssertExpectations(t)
+}

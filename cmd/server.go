@@ -78,6 +78,31 @@ func (s *server) Start(ctx context.Context, req *pb.ProcessRequest) (*pb.Process
 	return &pb.ProcessResponse{Id: jobId}, nil
 }
 
+func (s *server) UpdateInfo(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
+	slog.Info(fmt.Sprintf("[Server] :: Updating job '%s' with params %+v", req.Id, req))
+	// Parse video visibility from protobuff format to core format
+	if req.VidVisibility >= pb.Visibility_UNKNOWN {
+		return nil, fmt.Errorf("visibility cannot be unknown")
+	}
+	pVis := processing_common.Unlisted
+	if req.VidVisibility == pb.Visibility_PUBLIC {
+		pVis = processing_common.Public
+	} else if req.VidVisibility == pb.Visibility_PRIVATE {
+		pVis = processing_common.Private
+	}
+	err := s.processor.UpdateInfos(req.Id, processing_common.UserInput{
+		Vid: processing_common.VideoOpt{
+			Description: req.VidDesc,
+			Title:       req.VidTitle,
+			Visibility:  pVis,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &pb.UpdateResponse{Id: req.Id}, nil
+}
+
 func main() {
 	pEnv := parseEnv()
 	slog.Info("[Main] :: Dapr port is " + strconv.Itoa(pEnv.daprGrpcPort))

@@ -58,17 +58,22 @@ func (rp *RecordProcessor) startJob(job *job_store.JobState) {
 
 func (rp *RecordProcessor) Add(audioKeys []string, backgroundAudioKey string) (string, error) {
 
+	jobId := uuid.New().String()
 	job := &job_store.JobState{
-		Id:                 uuid.New().String(),
+		Id:                 jobId,
 		Step:               processing_common.StepCooking,
 		RawAudioKeys:       audioKeys,
 		BackgroundAudioKey: backgroundAudioKey,
+		UserInput: processing_common.UserInput{Vid: processing_common.VideoOpt{
+			Description: "",
+			Title:       jobId,
+			Visibility:  processing_common.Unlisted,
+		}},
 	}
 	err := rp.store.Upsert(job)
 	if err != nil {
 		return "", err
 	}
-	// TODO :: Handle progress.
 	// The channel is buffered for 100 events, it may block if we get (and we will) go over this limit
 	// We should probably have a separate goroutine that reads from the channel and sends the events to the client
 	go rp.startJob(job)
@@ -125,6 +130,19 @@ func (rp *RecordProcessor) Process(job *job_store.JobState) error {
 	return nil
 }
 
+func (rp *RecordProcessor) UpdateInfos(jobId string, userInput processing_common.UserInput) error {
+	job, err := rp.store.Get(jobId)
+	if err != nil {
+		return err
+	}
+	job.UserInput = userInput
+	err = rp.store.Upsert(job)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (rp *RecordProcessor) cook(job *job_store.JobState) error {
 	cookedKeys, err := rp.cooker.Cook(job.Id, job.RawAudioKeys)
 	if err != nil {
@@ -154,11 +172,10 @@ func (rp *RecordProcessor) encode(job *job_store.JobState) error {
 }
 
 func (rp *RecordProcessor) upload(job *job_store.JobState) error {
-	vid, err := rp.uploader.Upload(job.Id, job.VideoKey, &uploader.VideoOpt{
-		// TODO, configure these, these should be user-provided
-		Description: "test",
-		Title:       "test",
-		Visibility:  uploader.Unlisted,
+	vid, err := rp.uploader.Upload(job.Id, job.VideoKey, &processing_common.VideoOpt{
+		Description: job.UserInput.Vid.Description,
+		Title:       job.UserInput.Vid.Title,
+		Visibility:  job.UserInput.Vid.Visibility,
 	})
 	if err != nil {
 		return err

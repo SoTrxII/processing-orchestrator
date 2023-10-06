@@ -21,6 +21,8 @@ type JobState struct {
 	BackgroundAudioKey string
 	// Video as encoded by the Encoder
 	VideoKey string
+	// User provided data
+	UserInput processing_common.UserInput
 	// Video Link as uploaded by the Uploader
 	VideoLink string
 }

@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type ProcessorClient interface {
 	Start(ctx context.Context, in *ProcessRequest, opts ...grpc.CallOption) (*ProcessResponse, error)
 	Watch(ctx context.Context, in *WatchRequest, opts ...grpc.CallOption) (Processor_WatchClient, error)
+	UpdateInfo(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*UpdateResponse, error)
 }
 
 type processorClient struct {
@@ -75,12 +76,22 @@ func (x *processorWatchClient) Recv() (*ProcessingStatus, error) {
 	return m, nil
 }
 
+func (c *processorClient) UpdateInfo(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*UpdateResponse, error) {
+	out := new(UpdateResponse)
+	err := c.cc.Invoke(ctx, "/processing_orchestrator.Processor/UpdateInfo", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProcessorServer is the server API for Processor service.
 // All implementations must embed UnimplementedProcessorServer
 // for forward compatibility
 type ProcessorServer interface {
 	Start(context.Context, *ProcessRequest) (*ProcessResponse, error)
 	Watch(*WatchRequest, Processor_WatchServer) error
+	UpdateInfo(context.Context, *UpdateRequest) (*UpdateResponse, error)
 	mustEmbedUnimplementedProcessorServer()
 }
 
@@ -93,6 +104,9 @@ func (UnimplementedProcessorServer) Start(context.Context, *ProcessRequest) (*Pr
 }
 func (UnimplementedProcessorServer) Watch(*WatchRequest, Processor_WatchServer) error {
 	return status.Errorf(codes.Unimplemented, "method Watch not implemented")
+}
+func (UnimplementedProcessorServer) UpdateInfo(context.Context, *UpdateRequest) (*UpdateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateInfo not implemented")
 }
 func (UnimplementedProcessorServer) mustEmbedUnimplementedProcessorServer() {}
 
@@ -146,6 +160,24 @@ func (x *processorWatchServer) Send(m *ProcessingStatus) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _Processor_UpdateInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProcessorServer).UpdateInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/processing_orchestrator.Processor/UpdateInfo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProcessorServer).UpdateInfo(ctx, req.(*UpdateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Processor_ServiceDesc is the grpc.ServiceDesc for Processor service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -156,6 +188,10 @@ var Processor_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Start",
 			Handler:    _Processor_Start_Handler,
+		},
+		{
+			MethodName: "UpdateInfo",
+			Handler:    _Processor_UpdateInfo_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
