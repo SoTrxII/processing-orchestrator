@@ -2,7 +2,9 @@ package encoder
 
 import (
 	"fmt"
+	"math"
 	processing_common "processing-orchestrator/pkg/processing-common"
+	"strings"
 	"time"
 )
 
@@ -54,15 +56,28 @@ type EncodingData struct {
 	// Estimated size of the converted file (kb)
 	Size int64 `json:"size"`
 	// Total processed time
-	Time time.Time `json:"time"`
+	Time time.Duration `json:"time"`
 	// Target bitrate
 	Bitrate string `json:"bitrate"`
 	// Encoding speed. A "2" means 1 second of encoding would be a 2 seconds playback
 	Speed float32 `json:"speed"`
+	// The duration of the output file
+	TargetDuration time.Duration `json:"totalDuration"`
 	// Error message
 	// Only set if the state is "error"
 	Message string `json:"message"`
 }
+
+// Returns the percentage of the encoding progress
+func (ed *EncodingData) GetProgressPercentage() (float64, error) {
+	// Preventing a div by 0 zero
+	if ed.TargetDuration == 0 {
+		return 0, fmt.Errorf("target duration is 0")
+	}
+
+	return math.Round((ed.Time.Seconds() / ed.TargetDuration.Seconds()) * 100), nil
+}
+
 type EncodingEvent struct {
 	processing_common.ServiceEvent
 	Data EncodingData `json:"data"`
@@ -82,8 +97,13 @@ func (e *EncodingEvent) ToProgress() *processing_common.ServiceProgress {
 	case processing_common.Error:
 		pg.Error = fmt.Errorf(e.Data.Message)
 	case processing_common.InProgress:
-		// TODO : Upsert ETA
-		pg.Progress = fmt.Sprintf("Encoding %d frames at %d fps", e.Data.Frames, e.Data.Fps)
+		ss := strings.Builder{}
+		ss.WriteString(fmt.Sprintf("Processed %s", e.Data.Time))
+		if e.Data.TargetDuration != 0 {
+			percentage := math.Min(e.Data.Time.Seconds()/e.Data.TargetDuration.Seconds()*100, 100)
+			ss.WriteString(fmt.Sprintf(" on total %s (%.2f%%)", e.Data.TargetDuration, percentage))
+		}
+		pg.Progress = ss.String()
 	default:
 		pg.Error = fmt.Errorf("Unsupported state %d", e.State)
 	}

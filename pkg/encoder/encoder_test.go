@@ -78,6 +78,38 @@ func TestEncoder_ErrorDuringEncoding(t *testing.T) {
 
 }
 
+func TestEncoder_GetProgress_NoTotalDuration(t *testing.T) {
+	sampleEncodingData := EncodingData{
+		Frames:         4545421,
+		Fps:            60,
+		Quality:        20,
+		Size:           8898,
+		Time:           0,
+		Bitrate:        "192kb",
+		Speed:          2,
+		TargetDuration: 0,
+	}
+	percentage, err := sampleEncodingData.GetProgressPercentage()
+	assert.Error(t, err)
+	assert.Zero(t, percentage)
+}
+
+func TestEncoder_GetProgress_WithTotalDuration(t *testing.T) {
+	sampleEncodingData := EncodingData{
+		Frames:         4545421,
+		Fps:            60,
+		Quality:        20,
+		Size:           8898,
+		Time:           2 * time.Second,
+		Bitrate:        "192kb",
+		Speed:          2,
+		TargetDuration: 10 * time.Second,
+	}
+	percentage, err := sampleEncodingData.GetProgressPercentage()
+	assert.NoError(t, err)
+	assert.Equal(t, 20.0, percentage)
+}
+
 func getDoneEvt(jobId string) []byte {
 	evt := EncodingEvent{
 		ServiceEvent: processing_common.ServiceEvent{
@@ -89,7 +121,7 @@ func getDoneEvt(jobId string) []byte {
 			Fps:     60,
 			Quality: 20,
 			Size:    8898,
-			Time:    time.Now(),
+			Time:    0,
 			Bitrate: "192kb",
 			Speed:   2,
 		},
