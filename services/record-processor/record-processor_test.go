@@ -81,6 +81,47 @@ func TestRecordProcessor_Process_ErrorDuringUploading(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestRecordProcessor_Process_ErrorDuringAddToPlaylist(t *testing.T) {
+	mockCooker := &test_utils.MockCookingService{}
+	mockEncoder := &test_utils.MockEncodingService{}
+	mockUploader := &test_utils.MockUploadingService{}
+	evtCh := make(chan processing_common.Watchable, 1)
+	mockStore := &test_utils.MockJobStore{}
+	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore)
+
+	mockCooker.EXPECT().Cook(mock.Anything, mock.Anything).Return([]string{"cooked"}, nil)
+	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
+	mockEncoder.EXPECT().Encode(mock.Anything, mock.Anything, mock.Anything).Return("video", nil)
+	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
+	mockUploader.EXPECT().Upload(mock.Anything, mock.Anything, mock.Anything).Return(&uploader.Video{
+		Id:           "fix",
+		Title:        "",
+		Description:  "",
+		CreatedAt:    time.Time{},
+		Duration:     0,
+		Visibility:   "",
+		ThumbnailUrl: "",
+		WatchPrefix:  "pre",
+	}, nil)
+	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
+	mockUploader.EXPECT().AddToPlaylist(mock.Anything, mock.Anything).Return(fmt.Errorf("test"))
+	job := &job_store.JobState{
+		Id:                 "test",
+		Step:               processing_common.StepCooking,
+		RawAudioKeys:       []string{"raw"},
+		CookedAudioKeys:    nil,
+		BackgroundAudioKey: "",
+		VideoKey:           "",
+		UserInput: processing_common.UserInput{
+			Vid: processing_common.VideoOpt{
+				PlaylistId: "playlist",
+			},
+		},
+	}
+	err := rp.Process(job)
+	assert.Error(t, err)
+}
+
 func TestRecordProcessor_ProcessWhole(t *testing.T) {
 	mockCooker := &test_utils.MockCookingService{}
 	mockEncoder := &test_utils.MockEncodingService{}

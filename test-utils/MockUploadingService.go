@@ -22,6 +22,49 @@ func (_m *MockUploadingService) EXPECT() *MockUploadingService_Expecter {
 	return &MockUploadingService_Expecter{mock: &_m.Mock}
 }
 
+// AddToPlaylist provides a mock function with given fields: vidId, playlistId
+func (_m *MockUploadingService) AddToPlaylist(vidId string, playlistId string) error {
+	ret := _m.Called(vidId, playlistId)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(vidId, playlistId)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockUploadingService_AddToPlaylist_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddToPlaylist'
+type MockUploadingService_AddToPlaylist_Call struct {
+	*mock.Call
+}
+
+// AddToPlaylist is a helper method to define mock.On call
+//   - vidId string
+//   - playlistId string
+func (_e *MockUploadingService_Expecter) AddToPlaylist(vidId interface{}, playlistId interface{}) *MockUploadingService_AddToPlaylist_Call {
+	return &MockUploadingService_AddToPlaylist_Call{Call: _e.mock.On("AddToPlaylist", vidId, playlistId)}
+}
+
+func (_c *MockUploadingService_AddToPlaylist_Call) Run(run func(vidId string, playlistId string)) *MockUploadingService_AddToPlaylist_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockUploadingService_AddToPlaylist_Call) Return(_a0 error) *MockUploadingService_AddToPlaylist_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockUploadingService_AddToPlaylist_Call) RunAndReturn(run func(string, string) error) *MockUploadingService_AddToPlaylist_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Upload provides a mock function with given fields: jobId, storageKey, opt
 func (_m *MockUploadingService) Upload(jobId string, storageKey string, opt *processing_common.VideoOpt) (*uploader.Video, error) {
 	ret := _m.Called(jobId, storageKey, opt)

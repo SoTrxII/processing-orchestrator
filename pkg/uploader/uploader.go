@@ -3,6 +3,7 @@ package uploader
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/dapr/go-sdk/service/common"
 	"processing-orchestrator/internal/utils"
 	processing_common "processing-orchestrator/pkg/processing-common"
@@ -98,4 +99,9 @@ func (u *Uploader) Upload(jobId, storageKey string, opt *processing_common.Video
 		return nil, err
 	}
 	return &video, nil
+}
+
+func (u *Uploader) AddToPlaylist(vidId, playlistId string) error {
+	_, err := u.invoker.InvokeMethodWithContent(context.Background(), u.invokeComponent, fmt.Sprintf("v1/playlists/%s/videos/%s", playlistId, vidId), "PUT", nil)
+	return err
 }

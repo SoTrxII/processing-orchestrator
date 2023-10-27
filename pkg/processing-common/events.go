@@ -91,6 +91,8 @@ type VideoOpt struct {
 	Title string `json:"title" binding:"required,max=100"`
 	// Visibility of the item
 	Visibility Visibility `json:"visibility" binding:"required"`
+	// Optional playlist to put the newly uploaded video intp
+	PlaylistId string `json:"playlistId" omitempty:"true"`
 }
 
 type UserInput struct {

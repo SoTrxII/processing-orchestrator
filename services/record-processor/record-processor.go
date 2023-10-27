@@ -181,6 +181,13 @@ func (rp *RecordProcessor) upload(job *job_store.JobState) error {
 		return err
 	}
 
+	if job.UserInput.Vid.PlaylistId != "" {
+		err = rp.uploader.AddToPlaylist(vid.Id, job.UserInput.Vid.PlaylistId)
+		if err != nil {
+			return err
+		}
+	}
+
 	job.VideoLink = vid.WatchPrefix + vid.Id
 	job.Step = processing_common.StepDone
 	err = rp.store.Upsert(job)
