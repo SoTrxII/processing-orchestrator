@@ -172,6 +172,7 @@ func (rp *RecordProcessor) encode(job *job_store.JobState) error {
 }
 
 func (rp *RecordProcessor) upload(job *job_store.JobState) error {
+	slog.Info(fmt.Sprintf("[RecordProcessor] :: job %s :: User Input %+v", job.Id, job.UserInput))
 	vid, err := rp.uploader.Upload(job.Id, job.VideoKey, &processing_common.VideoOpt{
 		Description: job.UserInput.Vid.Description,
 		Title:       job.UserInput.Vid.Title,
