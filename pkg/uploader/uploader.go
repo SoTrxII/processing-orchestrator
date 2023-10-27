@@ -102,6 +102,6 @@ func (u *Uploader) Upload(jobId, storageKey string, opt *processing_common.Video
 }
 
 func (u *Uploader) AddToPlaylist(vidId, playlistId string) error {
-	_, err := u.invoker.InvokeMethodWithContent(context.Background(), u.invokeComponent, fmt.Sprintf("v1/playlists/%s/videos/%s", playlistId, vidId), "PUT", nil)
+	_, err := u.invoker.InvokeMethod(context.Background(), u.invokeComponent, fmt.Sprintf("v1/playlists/%s/videos/%s", playlistId, vidId), "PUT")
 	return err
 }

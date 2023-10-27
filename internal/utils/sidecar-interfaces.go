@@ -19,6 +19,7 @@ type Subscriber interface {
 type DataContent = dapr.DataContent
 type Invoker interface {
 	InvokeMethodWithContent(ctx context.Context, appID, method, verb string, content *DataContent) ([]byte, error)
+	InvokeMethod(ctx context.Context, appID, method, verb string) ([]byte, error)
 }
 
 type StateOption = dapr.StateOption
