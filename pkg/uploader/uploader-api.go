@@ -2,7 +2,9 @@ package uploader
 
 import (
 	"fmt"
+	"processing-orchestrator/internal/utils"
 	processing_common "processing-orchestrator/pkg/processing-common"
+	"strings"
 	"time"
 )
 
@@ -71,7 +73,14 @@ func (e *UploadEvent) ToProgress() *processing_common.ServiceProgress {
 		pg.Error = fmt.Errorf("Unkown error")
 	case processing_common.InProgress:
 		// TODO : Upsert ETA
-		pg.Progress = fmt.Sprintf("Uploaded %d bytes on total %d", e.Data.Current, e.Data.Total)
+		ss := strings.Builder{}
+		ss.WriteString(fmt.Sprintf("Uploaded %s", utils.FormatSize(uint(e.Data.Current))))
+		// Preventing a div by 0 error
+		if e.Data.Total != 0 {
+			percentage := float64(e.Data.Current) / float64(e.Data.Total) * 100
+			ss.WriteString(fmt.Sprintf(" on total %s (%.2f%%)", utils.FormatSize(uint(e.Data.Total)), percentage))
+		}
+		pg.Progress = ss.String()
 	default:
 		pg.Error = fmt.Errorf("unsupported state %d", e.State)
 	}
