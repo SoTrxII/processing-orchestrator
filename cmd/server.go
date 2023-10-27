@@ -95,6 +95,7 @@ func (s *server) UpdateInfo(ctx context.Context, req *pb.UpdateRequest) (*pb.Upd
 			Description: req.VidDesc,
 			Title:       req.VidTitle,
 			Visibility:  pVis,
+			PlaylistId:  req.PlaylistId,
 		},
 	})
 	if err != nil {

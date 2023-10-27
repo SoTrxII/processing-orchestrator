@@ -44,6 +44,7 @@ message UpdateRequest {
   string vidTitle = 2;
   string vidDesc = 3;
   Visibility vidVisibility = 4;
+  string playlistId = 5;
 }
 
 message UpdateResponse {
