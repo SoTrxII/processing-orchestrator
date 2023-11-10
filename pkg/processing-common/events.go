@@ -93,6 +93,19 @@ type VideoOpt struct {
 	Visibility Visibility `json:"visibility" binding:"required"`
 	// Optional playlist to put the newly uploaded video intp
 	PlaylistId string `json:"playlistId" omitempty:"true"`
+	// Optional thumbnail
+	Thumbnail ThumbnailOpt `json:"thumbnail" omitempty:"true"`
+}
+
+type ThumbnailOpt struct {
+	// Main title, at the center of the thumbnail
+	Title string `json:"title" omitempty:"true"`
+	// Subtitle, at the bottom of the thumbnail
+	SubTitle string `json:"subTitle" omitempty:"true"`
+	// Optional numbering
+	Number int `json:"number" omitempty:"true"`
+	// Background image
+	BgUrl string `json:"bgUrl" omitempty:"true"`
 }
 
 type UserInput struct {

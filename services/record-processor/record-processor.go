@@ -8,6 +8,7 @@ import (
 	"processing-orchestrator/pkg/encoder"
 	job_store "processing-orchestrator/pkg/job-store"
 	"processing-orchestrator/pkg/processing-common"
+	thumb_generator "processing-orchestrator/pkg/thumb-generator"
 	"processing-orchestrator/pkg/uploader"
 )
 
@@ -17,15 +18,17 @@ type RecordProcessor struct {
 	uploader   uploader.UploadingService
 	progressCh chan processing_common.Watchable
 	store      job_store.JobStore
+	addons     Addons
 }
 
-func NewRecordProcessor(cooker cooker.CookingService, encoder encoder.EncodingService, uploader uploader.UploadingService, progressCh chan processing_common.Watchable, store job_store.JobStore) *RecordProcessor {
+func NewRecordProcessor(cooker cooker.CookingService, encoder encoder.EncodingService, uploader uploader.UploadingService, progressCh chan processing_common.Watchable, store job_store.JobStore, plugins Addons) *RecordProcessor {
 	return &RecordProcessor{
 		cooker:     cooker,
 		encoder:    encoder,
 		uploader:   uploader,
 		progressCh: progressCh,
 		store:      store,
+		addons:     plugins,
 	}
 }
 
@@ -104,10 +107,30 @@ func (rp *RecordProcessor) Process(job *job_store.JobState) error {
 
 	// Upload
 	if job.Step == processing_common.StepUploading {
+		thumbChan := make(chan string, 1)
+		if rp.addons.ThumbGen != nil {
+			go rp.generateThumbnail(job, thumbChan)
+		} else {
+			slog.Info(fmt.Sprintf("[RecordProcessor] :: Skipping thumbnail generation for job %s, no generator supplied", job.Id))
+			thumbChan <- ""
+		}
+
 		slog.Info(fmt.Sprintf("[RecordProcessor] :: Uploading job %s", job.Id))
 		err := rp.upload(job)
 		if err != nil {
 			return err
+		}
+
+		// Wait for the thumbnail to be generated
+		// This is not a mandatory step, if it fails, we just log it
+		thumbKey := <-thumbChan
+		if thumbKey != "" {
+			err = rp.uploader.SetThumbnail(job.VideoKey, thumbKey)
+			if err != nil {
+				slog.Error(fmt.Sprintf("[RecordProcessor] :: while setting thumbnail for job %s : %s", job.Id, err.Error()))
+			} else {
+				slog.Info(fmt.Sprintf("[RecordProcessor] :: Thumbnail set for job %s", job.Id))
+			}
 		}
 	}
 	slog.Info(fmt.Sprintf("[RecordProcessor] :: Finished uploading job %s", job.Id))
@@ -196,4 +219,22 @@ func (rp *RecordProcessor) upload(job *job_store.JobState) error {
 		slog.Warn(fmt.Sprintf("[RecordProcessor] :: while saving job map: %s", err.Error()))
 	}
 	return nil
+}
+
+// generateThumbnail Generate a thumbnail for a job. Return the key of the thumbnail or an empty string if the generation failed
+func (rp *RecordProcessor) generateThumbnail(job *job_store.JobState, resChan chan string) {
+	slog.Info(fmt.Sprintf("[RecordProcessor] :: Generating thumbnail for job %s", job.Id))
+	key, err := rp.addons.ThumbGen.GenerateThumbnail(&thumb_generator.ThumbnailRequest{
+		// Todo :: Send this
+		GmsAvatarUrl:  nil,
+		Title:         job.UserInput.Vid.Thumbnail.Title,
+		EpisodeTitle:  job.UserInput.Vid.Thumbnail.SubTitle,
+		EpisodeIndex:  int32(job.UserInput.Vid.Thumbnail.Number),
+		BackgroundUrl: job.UserInput.Vid.Thumbnail.BgUrl,
+	})
+	if err != nil {
+		slog.Error(fmt.Sprintf("[RecordProcessor] :: while generating thumbnail for job %s : %s", job.Id, err.Error()))
+	}
+	resChan <- key
+
 }

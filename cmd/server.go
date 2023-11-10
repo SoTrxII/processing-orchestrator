@@ -17,6 +17,7 @@ import (
 	"processing-orchestrator/pkg/encoder"
 	job_store "processing-orchestrator/pkg/job-store"
 	processing_common "processing-orchestrator/pkg/processing-common"
+	thumb_generator "processing-orchestrator/pkg/thumb-generator"
 	"processing-orchestrator/pkg/uploader"
 	pb "processing-orchestrator/proto"
 	progress_reporter "processing-orchestrator/services/progress-reporter"
@@ -96,6 +97,12 @@ func (s *server) UpdateInfo(ctx context.Context, req *pb.UpdateRequest) (*pb.Upd
 			Title:       req.VidTitle,
 			Visibility:  pVis,
 			PlaylistId:  req.PlaylistId,
+			Thumbnail: processing_common.ThumbnailOpt{
+				Title:    req.Thumbnail.Title,
+				SubTitle: req.Thumbnail.Subtitle,
+				Number:   int(req.Thumbnail.Number),
+				BgUrl:    req.Thumbnail.BgUrl,
+			},
 		},
 	})
 	if err != nil {
@@ -140,6 +147,7 @@ type env struct {
 	serverPort int
 	// Dapr components ids
 	daprCpnUploader string
+	daprCpnThumbGen string
 	daprCpnPub      string
 	daprCpnSub      string
 	daprCpnState    string
@@ -150,6 +158,7 @@ func parseEnv() *env {
 		serverPort:      DEFAULT_PORT,
 		daprGrpcPort:    DEFAULT_DAPR_PORT,
 		daprCpnUploader: DEFAULT_UPLOADER_ID,
+		daprCpnThumbGen: "",
 		daprCpnPub:      DEFAULT_PUB_COMPONENT,
 		daprCpnSub:      DEFAULT_SUB_COMPONENT,
 		daprCpnState:    DEFAULT_STATE_STORE_COMPONENT,
@@ -163,6 +172,9 @@ func parseEnv() *env {
 	}
 	if id, isDefined := os.LookupEnv("UPLOADER_NAME"); isDefined && id != "" {
 		pEnv.daprCpnUploader = id
+	}
+	if id, isDefined := os.LookupEnv("THUMB_GEN_NAME"); isDefined && id != "" {
+		pEnv.daprCpnThumbGen = id
 	}
 	if id, isDefined := os.LookupEnv("PUBSUB_NAME"); isDefined && id != "" {
 		pEnv.daprCpnPub = id
@@ -181,6 +193,8 @@ func DI(subServer common.Service, env *env) (*record_processor.RecordProcessor, 
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// Core processing components, all mandatory
 	progressCh := make(chan processing_common.Watchable, 100)
 	cook := cooker.NewCooker(daprClient, env.daprCpnPub, env.daprCpnSub, progressCh)
 	err = cook.SubscribeTo(subServer)
@@ -199,7 +213,14 @@ func DI(subServer common.Service, env *env) (*record_processor.RecordProcessor, 
 	}
 	store := job_store.NewJobStore(daprClient, env.daprCpnState)
 	reporter := progress_reporter.NewProgressReporter(progressCh)
-	return record_processor.NewRecordProcessor(cook, encode, upload, progressCh, store), reporter, nil
+
+	// Optional components
+	addons := record_processor.Addons{}
+	if env.daprCpnThumbGen != "" {
+		addons.ThumbGen = thumb_generator.NewThumbGenerator(fmt.Sprintf("localhost:%d", env.daprGrpcPort), env.daprCpnThumbGen)
+	}
+
+	return record_processor.NewRecordProcessor(cook, encode, upload, progressCh, store, addons), reporter, nil
 }
 
 func makeDaprClient(port, maxRequestSizeMB int) (client.Client, error) {

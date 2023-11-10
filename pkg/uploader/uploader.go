@@ -105,3 +105,8 @@ func (u *Uploader) AddToPlaylist(vidId, playlistId string) error {
 	_, err := u.invoker.InvokeMethod(context.Background(), u.invokeComponent, fmt.Sprintf("v1/playlists/%s/videos/%s", playlistId, vidId), "PUT")
 	return err
 }
+
+func (u *Uploader) SetThumbnail(vidId, thumbKey string) error {
+	_, err := u.invoker.InvokeMethod(context.Background(), u.invokeComponent, fmt.Sprintf("v1/videos/%s/thumbnail/%s", vidId, thumbKey), "POST")
+	return err
+}

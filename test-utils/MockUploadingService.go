@@ -65,6 +65,49 @@ func (_c *MockUploadingService_AddToPlaylist_Call) RunAndReturn(run func(string,
 	return _c
 }
 
+// SetThumbnail provides a mock function with given fields: vidId, thumbKey
+func (_m *MockUploadingService) SetThumbnail(vidId string, thumbKey string) error {
+	ret := _m.Called(vidId, thumbKey)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(vidId, thumbKey)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockUploadingService_SetThumbnail_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetThumbnail'
+type MockUploadingService_SetThumbnail_Call struct {
+	*mock.Call
+}
+
+// SetThumbnail is a helper method to define mock.On call
+//   - vidId string
+//   - thumbKey string
+func (_e *MockUploadingService_Expecter) SetThumbnail(vidId interface{}, thumbKey interface{}) *MockUploadingService_SetThumbnail_Call {
+	return &MockUploadingService_SetThumbnail_Call{Call: _e.mock.On("SetThumbnail", vidId, thumbKey)}
+}
+
+func (_c *MockUploadingService_SetThumbnail_Call) Run(run func(vidId string, thumbKey string)) *MockUploadingService_SetThumbnail_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockUploadingService_SetThumbnail_Call) Return(_a0 error) *MockUploadingService_SetThumbnail_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockUploadingService_SetThumbnail_Call) RunAndReturn(run func(string, string) error) *MockUploadingService_SetThumbnail_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Upload provides a mock function with given fields: jobId, storageKey, opt
 func (_m *MockUploadingService) Upload(jobId string, storageKey string, opt *processing_common.VideoOpt) (*uploader.Video, error) {
 	ret := _m.Called(jobId, storageKey, opt)

@@ -11,6 +11,7 @@ import (
 type UploadingService interface {
 	Upload(jobId, storageKey string, opt *processing_common.VideoOpt) (*Video, error)
 	AddToPlaylist(vidId, playlistId string) error
+	SetThumbnail(vidId, thumbKey string) error
 }
 
 const (

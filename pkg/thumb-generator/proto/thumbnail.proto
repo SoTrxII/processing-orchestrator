@@ -1,0 +1,20 @@
+syntax = "proto3";
+option go_package = "./thumbnail-generator";
+package thumbnail;
+
+message ThumbnailRequest {
+  repeated string gmsAvatarUrl = 1;
+  string title = 2;
+  string episodeTitle = 3;
+  int32 episodeIndex = 4;
+  string backgroundUrl = 5;
+  string logoUrl = 6;
+}
+
+message ThumbnailResponse {
+  string thumbnailKey = 1;
+}
+
+service Thumbnail {
+  rpc CreateThumbnail (ThumbnailRequest) returns (ThumbnailResponse) {}
+}

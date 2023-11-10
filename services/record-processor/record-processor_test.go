@@ -18,7 +18,7 @@ func TestRecordProcessor_Process_ErrorDuringCooking(t *testing.T) {
 	mockUploader := &test_utils.MockUploadingService{}
 	evtCh := make(chan processing_common.Watchable, 1)
 	mockStore := &test_utils.MockJobStore{}
-	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore)
+	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore, Addons{})
 
 	mockCooker.EXPECT().Cook(mock.Anything, mock.Anything).Return(nil, fmt.Errorf("test"))
 	job := &job_store.JobState{
@@ -39,7 +39,7 @@ func TestRecordProcessor_Process_ErrorDuringEncoding(t *testing.T) {
 	mockUploader := &test_utils.MockUploadingService{}
 	evtCh := make(chan processing_common.Watchable, 1)
 	mockStore := &test_utils.MockJobStore{}
-	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore)
+	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore, Addons{})
 
 	mockCooker.EXPECT().Cook(mock.Anything, mock.Anything).Return([]string{"cooked"}, nil)
 	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
@@ -62,7 +62,7 @@ func TestRecordProcessor_Process_ErrorDuringUploading(t *testing.T) {
 	mockUploader := &test_utils.MockUploadingService{}
 	evtCh := make(chan processing_common.Watchable, 1)
 	mockStore := &test_utils.MockJobStore{}
-	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore)
+	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore, Addons{})
 
 	mockCooker.EXPECT().Cook(mock.Anything, mock.Anything).Return([]string{"cooked"}, nil)
 	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
@@ -87,7 +87,7 @@ func TestRecordProcessor_Process_ErrorDuringAddToPlaylist(t *testing.T) {
 	mockUploader := &test_utils.MockUploadingService{}
 	evtCh := make(chan processing_common.Watchable, 1)
 	mockStore := &test_utils.MockJobStore{}
-	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore)
+	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore, Addons{})
 
 	mockCooker.EXPECT().Cook(mock.Anything, mock.Anything).Return([]string{"cooked"}, nil)
 	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
@@ -128,7 +128,7 @@ func TestRecordProcessor_ProcessWhole(t *testing.T) {
 	mockUploader := &test_utils.MockUploadingService{}
 	evtCh := make(chan processing_common.Watchable, 1)
 	mockStore := &test_utils.MockJobStore{}
-	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore)
+	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore, Addons{})
 
 	mockCooker.EXPECT().Cook(mock.Anything, mock.Anything).Return([]string{"cooked"}, nil)
 	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
@@ -166,13 +166,136 @@ func TestRecordProcessor_ProcessWhole(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestRecordProcessor_ProcessWhole_WithThumbnailAddon(t *testing.T) {
+	mockCooker := &test_utils.MockCookingService{}
+	mockEncoder := &test_utils.MockEncodingService{}
+	mockUploader := &test_utils.MockUploadingService{}
+	evtCh := make(chan processing_common.Watchable, 1)
+	mockStore := &test_utils.MockJobStore{}
+	mockThumbnailAddon := &test_utils.MockThumbGenService{}
+	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore, Addons{
+		ThumbGen: mockThumbnailAddon,
+	})
+
+	mockCooker.EXPECT().Cook(mock.Anything, mock.Anything).Return([]string{"cooked"}, nil)
+	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
+	mockEncoder.EXPECT().Encode(mock.Anything, mock.Anything, mock.Anything).Return("video", nil)
+	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
+	mockUploader.EXPECT().Upload(mock.Anything, mock.Anything, mock.Anything).Return(&uploader.Video{
+		Id:           "fix",
+		Title:        "",
+		Description:  "",
+		CreatedAt:    time.Time{},
+		Duration:     0,
+		Visibility:   "",
+		ThumbnailUrl: "",
+		WatchPrefix:  "pre",
+	}, nil)
+	mockThumbnailAddon.EXPECT().GenerateThumbnail(mock.Anything).Return("thumb", nil)
+	mockUploader.EXPECT().SetThumbnail(mock.Anything, mock.Anything).Return(nil)
+	job := &job_store.JobState{
+		Id:                 "test",
+		Step:               processing_common.StepCooking,
+		RawAudioKeys:       []string{"raw"},
+		CookedAudioKeys:    nil,
+		BackgroundAudioKey: "",
+		VideoKey:           "",
+	}
+	err := rp.Process(job)
+	assert.NoError(t, err)
+	mockStore.AssertExpectations(t)
+}
+
+func TestRecordProcessor_ProcessWhole_ErrorThumbnailAddon(t *testing.T) {
+	mockCooker := &test_utils.MockCookingService{}
+	mockEncoder := &test_utils.MockEncodingService{}
+	mockUploader := &test_utils.MockUploadingService{}
+	evtCh := make(chan processing_common.Watchable, 1)
+	mockStore := &test_utils.MockJobStore{}
+	mockThumbnailAddon := &test_utils.MockThumbGenService{}
+	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore, Addons{
+		ThumbGen: mockThumbnailAddon,
+	})
+
+	mockCooker.EXPECT().Cook(mock.Anything, mock.Anything).Return([]string{"cooked"}, nil)
+	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
+	mockEncoder.EXPECT().Encode(mock.Anything, mock.Anything, mock.Anything).Return("video", nil)
+	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
+	mockUploader.EXPECT().Upload(mock.Anything, mock.Anything, mock.Anything).Return(&uploader.Video{
+		Id:           "fix",
+		Title:        "",
+		Description:  "",
+		CreatedAt:    time.Time{},
+		Duration:     0,
+		Visibility:   "",
+		ThumbnailUrl: "",
+		WatchPrefix:  "pre",
+	}, nil)
+	mockThumbnailAddon.EXPECT().GenerateThumbnail(mock.Anything).Return("", fmt.Errorf("test"))
+	mockUploader.EXPECT().SetThumbnail(mock.Anything, mock.Anything).Return(nil)
+	job := &job_store.JobState{
+		Id:                 "test",
+		Step:               processing_common.StepCooking,
+		RawAudioKeys:       []string{"raw"},
+		CookedAudioKeys:    nil,
+		BackgroundAudioKey: "",
+		VideoKey:           "",
+	}
+	err := rp.Process(job)
+	// An error during thumbnail generation is not fatal
+	assert.NoError(t, err)
+	mockStore.AssertExpectations(t)
+}
+
+func TestRecordProcessor_ProcessWhole_ErrorSetThumbnail(t *testing.T) {
+	mockCooker := &test_utils.MockCookingService{}
+	mockEncoder := &test_utils.MockEncodingService{}
+	mockUploader := &test_utils.MockUploadingService{}
+	evtCh := make(chan processing_common.Watchable, 1)
+	mockStore := &test_utils.MockJobStore{}
+	mockThumbnailAddon := &test_utils.MockThumbGenService{}
+	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore, Addons{
+		ThumbGen: mockThumbnailAddon,
+	})
+
+	mockCooker.EXPECT().Cook(mock.Anything, mock.Anything).Return([]string{"cooked"}, nil)
+	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
+	mockEncoder.EXPECT().Encode(mock.Anything, mock.Anything, mock.Anything).Return("video", nil)
+	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
+	mockUploader.EXPECT().Upload(mock.Anything, mock.Anything, mock.Anything).Return(&uploader.Video{
+		Id:           "fix",
+		Title:        "",
+		Description:  "",
+		CreatedAt:    time.Time{},
+		Duration:     0,
+		Visibility:   "",
+		ThumbnailUrl: "",
+		WatchPrefix:  "pre",
+	}, nil)
+
+	mockThumbnailAddon.EXPECT().GenerateThumbnail(mock.Anything).Return("thumb", nil)
+	mockUploader.EXPECT().SetThumbnail(mock.Anything, mock.Anything).Return(fmt.Errorf("test"))
+	job := &job_store.JobState{
+		Id:                 "test",
+		Step:               processing_common.StepCooking,
+		RawAudioKeys:       []string{"raw"},
+		CookedAudioKeys:    nil,
+		BackgroundAudioKey: "",
+		VideoKey:           "",
+	}
+	err := rp.Process(job)
+	// An error during thumbnail generation is not fatal
+	assert.NoError(t, err)
+	mockStore.AssertExpectations(t)
+}
+
 func TestRecordProcessor_UpdateInfos(t *testing.T) {
 	mockCooker := &test_utils.MockCookingService{}
 	mockEncoder := &test_utils.MockEncodingService{}
 	mockUploader := &test_utils.MockUploadingService{}
 	evtCh := make(chan processing_common.Watchable, 1)
 	mockStore := &test_utils.MockJobStore{}
-	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore)
+	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore, Addons{})
 
 	mockStore.EXPECT().Get(mock.Anything).Return(&job_store.JobState{
 		Id:                 "test",

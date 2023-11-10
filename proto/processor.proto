@@ -39,12 +39,21 @@ enum Visibility {
   PUBLIC = 2;
   UNKNOWN = 3;
 }
+
 message UpdateRequest {
   string id = 1;
   string vidTitle = 2;
   string vidDesc = 3;
   Visibility vidVisibility = 4;
   string playlistId = 5;
+  Thumbnail thumbnail = 6;
+}
+
+message Thumbnail {
+  string bgUrl = 1;
+  string title = 2;
+  string subtitle = 3;
+  uint32 number = 4;
 }
 
 message UpdateResponse {

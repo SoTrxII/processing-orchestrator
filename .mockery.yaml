@@ -25,3 +25,7 @@ packages:
     interfaces:
       Publisher:
       Subscriber:
+
+  processing-orchestrator/pkg/thumb-generator:
+    interfaces:
+      ThumbGenService:
