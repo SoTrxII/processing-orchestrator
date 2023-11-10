@@ -116,7 +116,7 @@ func (rp *RecordProcessor) Process(job *job_store.JobState) error {
 		}
 
 		slog.Info(fmt.Sprintf("[RecordProcessor] :: Uploading job %s", job.Id))
-		err := rp.upload(job)
+		vidId, err := rp.upload(job)
 		if err != nil {
 			return err
 		}
@@ -126,7 +126,7 @@ func (rp *RecordProcessor) Process(job *job_store.JobState) error {
 		thumbKey := <-thumbChan
 		slog.Info(fmt.Sprintf("[RecordProcessor] :: Thumbnail key for job %s : %s", job.Id, thumbKey))
 		if thumbKey != "" {
-			tErr := rp.uploader.SetThumbnail(job.VideoKey, thumbKey)
+			tErr := rp.uploader.SetThumbnail(vidId, thumbKey)
 			if tErr != nil {
 				slog.Warn(fmt.Sprintf("[RecordProcessor] :: while setting thumbnail for job %s : %s", job.Id, err.Error()))
 			} else {
@@ -195,7 +195,7 @@ func (rp *RecordProcessor) encode(job *job_store.JobState) error {
 	return nil
 }
 
-func (rp *RecordProcessor) upload(job *job_store.JobState) error {
+func (rp *RecordProcessor) upload(job *job_store.JobState) (string, error) {
 	slog.Info(fmt.Sprintf("[RecordProcessor] :: job %s :: User Input %+v", job.Id, job.UserInput))
 	vid, err := rp.uploader.Upload(job.Id, job.VideoKey, &processing_common.VideoOpt{
 		Description: job.UserInput.Vid.Description,
@@ -203,13 +203,13 @@ func (rp *RecordProcessor) upload(job *job_store.JobState) error {
 		Visibility:  job.UserInput.Vid.Visibility,
 	})
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if job.UserInput.Vid.PlaylistId != "" {
 		err = rp.uploader.AddToPlaylist(vid.Id, job.UserInput.Vid.PlaylistId)
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
 
@@ -219,7 +219,7 @@ func (rp *RecordProcessor) upload(job *job_store.JobState) error {
 	if err != nil {
 		slog.Warn(fmt.Sprintf("[RecordProcessor] :: while saving job map: %s", err.Error()))
 	}
-	return nil
+	return vid.Id, nil
 }
 
 // generateThumbnail Generate a thumbnail for a job. Return the key of the thumbnail or an empty string if the generation failed
