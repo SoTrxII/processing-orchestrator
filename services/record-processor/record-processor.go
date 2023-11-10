@@ -127,7 +127,7 @@ func (rp *RecordProcessor) Process(job *job_store.JobState) error {
 		if thumbKey != "" {
 			err = rp.uploader.SetThumbnail(job.VideoKey, thumbKey)
 			if err != nil {
-				slog.Error(fmt.Sprintf("[RecordProcessor] :: while setting thumbnail for job %s : %s", job.Id, err.Error()))
+				slog.Warn(fmt.Sprintf("[RecordProcessor] :: while setting thumbnail for job %s : %s", job.Id, err.Error()))
 			} else {
 				slog.Info(fmt.Sprintf("[RecordProcessor] :: Thumbnail set for job %s", job.Id))
 			}
@@ -233,7 +233,7 @@ func (rp *RecordProcessor) generateThumbnail(job *job_store.JobState, resChan ch
 		BackgroundUrl: job.UserInput.Vid.Thumbnail.BgUrl,
 	})
 	if err != nil {
-		slog.Error(fmt.Sprintf("[RecordProcessor] :: while generating thumbnail for job %s : %s", job.Id, err.Error()))
+		slog.Warn(fmt.Sprintf("[RecordProcessor] :: while generating thumbnail for job %s : %s", job.Id, err.Error()))
 	}
 	resChan <- key
 
