@@ -124,6 +124,7 @@ func (rp *RecordProcessor) Process(job *job_store.JobState) error {
 		// Wait for the thumbnail to be generated
 		// This is not a mandatory step, if it fails, we just log it
 		thumbKey := <-thumbChan
+		slog.Info(fmt.Sprintf("[RecordProcessor] :: Thumbnail key for job %s : %s", job.Id, thumbKey))
 		if thumbKey != "" {
 			tErr := rp.uploader.SetThumbnail(job.VideoKey, thumbKey)
 			if tErr != nil {
