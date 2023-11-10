@@ -12,6 +12,7 @@ import (
 
 type ThumbGenerator struct {
 	client          pb.ThumbnailClient
+	ctx             context.Context
 	invokeComponent string
 }
 
@@ -26,11 +27,12 @@ func NewThumbGenerator(daprAddress, appId string) *ThumbGenerator {
 
 	return &ThumbGenerator{
 		client: pb.NewThumbnailClient(conn),
+		ctx:    methodCtx,
 	}
 }
 
 func (t *ThumbGenerator) GenerateThumbnail(req *pb.ThumbnailRequest) (string, error) {
-	res, err := t.client.CreateThumbnail(context.Background(), req)
+	res, err := t.client.CreateThumbnail(t.ctx, req)
 	if err != nil {
 		return "", err
 	}
