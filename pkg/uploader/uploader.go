@@ -101,6 +101,24 @@ func (u *Uploader) Upload(jobId, storageKey string, opt *processing_common.Video
 	return &video, nil
 }
 
+func (u *Uploader) CreatePlaylist(opt *processing_common.VideoOpt) (*Playlist, error) {
+	bytes, err := json.Marshal(opt)
+
+	res, err := u.invoker.InvokeMethodWithContent(context.Background(), u.invokeComponent, "v1/playlists", "POST", &utils.DataContent{
+		ContentType: "application/json",
+		Data:        bytes,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var playlist Playlist
+	err = json.Unmarshal(res, &playlist)
+	if err != nil {
+		return nil, err
+	}
+	return &playlist, nil
+}
+
 func (u *Uploader) AddToPlaylist(vidId, playlistId string) error {
 	_, err := u.invoker.InvokeMethod(context.Background(), u.invokeComponent, fmt.Sprintf("v1/playlists/%s/videos/%s", playlistId, vidId), "PUT")
 	return err

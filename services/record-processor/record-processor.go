@@ -107,31 +107,10 @@ func (rp *RecordProcessor) Process(job *job_store.JobState) error {
 
 	// Upload
 	if job.Step == processing_common.StepUploading {
-		thumbChan := make(chan string, 1)
-		if rp.addons.ThumbGen != nil {
-			go rp.generateThumbnail(job, thumbChan)
-		} else {
-			slog.Info(fmt.Sprintf("[RecordProcessor] :: Skipping thumbnail generation for job %s, no generator supplied", job.Id))
-			thumbChan <- ""
-		}
-
 		slog.Info(fmt.Sprintf("[RecordProcessor] :: Uploading job %s", job.Id))
-		vidId, err := rp.upload(job)
+		err := rp.upload(job)
 		if err != nil {
 			return err
-		}
-
-		// Wait for the thumbnail to be generated
-		// This is not a mandatory step, if it fails, we just log it
-		thumbKey := <-thumbChan
-		slog.Info(fmt.Sprintf("[RecordProcessor] :: Thumbnail key for job %s : %s", job.Id, thumbKey))
-		if thumbKey != "" {
-			tErr := rp.uploader.SetThumbnail(vidId, thumbKey)
-			if tErr != nil {
-				slog.Warn(fmt.Sprintf("[RecordProcessor] :: while setting thumbnail for job %s : %s", job.Id, err.Error()))
-			} else {
-				slog.Info(fmt.Sprintf("[RecordProcessor] :: Thumbnail set for job %s", job.Id))
-			}
 		}
 	}
 	slog.Info(fmt.Sprintf("[RecordProcessor] :: Finished uploading job %s", job.Id))
@@ -195,21 +174,51 @@ func (rp *RecordProcessor) encode(job *job_store.JobState) error {
 	return nil
 }
 
-func (rp *RecordProcessor) upload(job *job_store.JobState) (string, error) {
+func (rp *RecordProcessor) upload(job *job_store.JobState) error {
+	// Multiple things to do here
+	// 1. Upload the video
+	// 2. Add it to a playlist, if no playlist is provided, create one
+	// 3. Generate a thumbnail
+	// 4. Add the thumbnail to the video
+
 	slog.Info(fmt.Sprintf("[RecordProcessor] :: job %s :: User Input %+v", job.Id, job.UserInput))
-	vid, err := rp.uploader.Upload(job.Id, job.VideoKey, &processing_common.VideoOpt{
-		Description: job.UserInput.Vid.Description,
-		Title:       job.UserInput.Vid.Title,
-		Visibility:  job.UserInput.Vid.Visibility,
-	})
-	if err != nil {
-		return "", err
+
+	// Launch the thumbnail generation
+	// If no generator is provided, we skip this step and send an empty string to the channel to unblock it
+	thumbChan := make(chan string, 1)
+	if rp.addons.ThumbGen != nil {
+		go rp.generateThumbnail(job, thumbChan)
+	} else {
+		slog.Info(fmt.Sprintf("[RecordProcessor] :: Skipping thumbnail generation for job %s, no generator supplied", job.Id))
+		thumbChan <- ""
 	}
 
-	if job.UserInput.Vid.PlaylistId != "" {
-		err = rp.uploader.AddToPlaylist(vid.Id, job.UserInput.Vid.PlaylistId)
-		if err != nil {
-			return "", err
+	// During the thumbnail generation, we can upload the video
+	vid, err := rp.uploader.Upload(job.Id, job.VideoKey, &job.UserInput.Vid)
+	if err != nil {
+		return err
+	}
+
+	// and add it to a playlist
+	// If it fails, we just log it
+	slog.Info(fmt.Sprintf("[RecordProcessor] :: job %s :: Adding video to playlist %s", job.Id, job.UserInput.Vid.PlaylistId))
+	pErr := rp.addVidToPlaylist(job.Id, vid.Id, &job.UserInput.Vid)
+	if pErr != nil {
+		slog.Warn(fmt.Sprintf("[RecordProcessor] :: while adding video to playlist for job %s : %s", job.Id, pErr.Error()))
+	} else {
+		slog.Info(fmt.Sprintf("[RecordProcessor] :: job %s :: Video added to playlist %s", job.Id, job.UserInput.Vid.PlaylistId))
+	}
+
+	// Wait for the thumbnail to be generated
+	// This is not a mandatory step, if it fails, we just log it
+	thumbKey := <-thumbChan
+	slog.Info(fmt.Sprintf("[RecordProcessor] :: Thumbnail key for job %s : %s", job.Id, thumbKey))
+	if thumbKey != "" {
+		tErr := rp.uploader.SetThumbnail(vid.Id, thumbKey)
+		if tErr != nil {
+			slog.Warn(fmt.Sprintf("[RecordProcessor] :: while setting thumbnail for job %s : %s", job.Id, err.Error()))
+		} else {
+			slog.Info(fmt.Sprintf("[RecordProcessor] :: Thumbnail set for job %s", job.Id))
 		}
 	}
 
@@ -219,7 +228,29 @@ func (rp *RecordProcessor) upload(job *job_store.JobState) (string, error) {
 	if err != nil {
 		slog.Warn(fmt.Sprintf("[RecordProcessor] :: while saving job map: %s", err.Error()))
 	}
-	return vid.Id, nil
+	return nil
+}
+
+// addVidToPlaylist Add a video to a playlist. If no playlist is provided, create one and add the video to it
+// The opt argument is modified to contain the playlist id if it was created
+// Return an error if the video could not be added to the playlist
+// Return nil if the video was added to the playlist successfully
+func (rp *RecordProcessor) addVidToPlaylist(jobId, vidId string, opt *processing_common.VideoOpt) error {
+	if opt.PlaylistId == "" {
+		slog.Info(fmt.Sprintf("[RecordProcessor] :: job %s :: No playlist provided, creating playlist", jobId))
+		playlist, err := rp.uploader.CreatePlaylist(&processing_common.VideoOpt{
+			Description: opt.Description,
+			Title:       opt.PlaylistTitle,
+			Visibility:  opt.Visibility,
+		})
+		if err != nil {
+			return err
+		}
+		opt.PlaylistId = playlist.Id
+		slog.Info(fmt.Sprintf("[RecordProcessor] :: job %s :: Playlist created with id %s", jobId, opt.PlaylistId))
+	}
+	slog.Info(fmt.Sprintf("[RecordProcessor] :: job %s :: Adding video to playlist %s", jobId, opt.PlaylistId))
+	return rp.uploader.AddToPlaylist(vidId, opt.PlaylistId)
 }
 
 // generateThumbnail Generate a thumbnail for a job. Return the key of the thumbnail or an empty string if the generation failed

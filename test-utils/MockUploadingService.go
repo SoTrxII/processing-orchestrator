@@ -65,6 +65,60 @@ func (_c *MockUploadingService_AddToPlaylist_Call) RunAndReturn(run func(string,
 	return _c
 }
 
+// CreatePlaylist provides a mock function with given fields: opt
+func (_m *MockUploadingService) CreatePlaylist(opt *processing_common.VideoOpt) (*uploader.Playlist, error) {
+	ret := _m.Called(opt)
+
+	var r0 *uploader.Playlist
+	var r1 error
+	if rf, ok := ret.Get(0).(func(*processing_common.VideoOpt) (*uploader.Playlist, error)); ok {
+		return rf(opt)
+	}
+	if rf, ok := ret.Get(0).(func(*processing_common.VideoOpt) *uploader.Playlist); ok {
+		r0 = rf(opt)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*uploader.Playlist)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(*processing_common.VideoOpt) error); ok {
+		r1 = rf(opt)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockUploadingService_CreatePlaylist_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreatePlaylist'
+type MockUploadingService_CreatePlaylist_Call struct {
+	*mock.Call
+}
+
+// CreatePlaylist is a helper method to define mock.On call
+//   - opt *processing_common.VideoOpt
+func (_e *MockUploadingService_Expecter) CreatePlaylist(opt interface{}) *MockUploadingService_CreatePlaylist_Call {
+	return &MockUploadingService_CreatePlaylist_Call{Call: _e.mock.On("CreatePlaylist", opt)}
+}
+
+func (_c *MockUploadingService_CreatePlaylist_Call) Run(run func(opt *processing_common.VideoOpt)) *MockUploadingService_CreatePlaylist_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*processing_common.VideoOpt))
+	})
+	return _c
+}
+
+func (_c *MockUploadingService_CreatePlaylist_Call) Return(_a0 *uploader.Playlist, _a1 error) *MockUploadingService_CreatePlaylist_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockUploadingService_CreatePlaylist_Call) RunAndReturn(run func(*processing_common.VideoOpt) (*uploader.Playlist, error)) *MockUploadingService_CreatePlaylist_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetThumbnail provides a mock function with given fields: vidId, thumbKey
 func (_m *MockUploadingService) SetThumbnail(vidId string, thumbKey string) error {
 	ret := _m.Called(vidId, thumbKey)

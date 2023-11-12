@@ -93,6 +93,8 @@ type VideoOpt struct {
 	Visibility Visibility `json:"visibility" binding:"required"`
 	// Optional playlist to put the newly uploaded video intp
 	PlaylistId string `json:"playlistId" omitempty:"true"`
+	// Mandatory playlist title. If playlistId is not provided, a new playlist will be created with this title
+	PlaylistTitle string `json:"playlistTitle" binding:"required"`
 	// Optional thumbnail
 	Thumbnail ThumbnailOpt `json:"thumbnail" omitempty:"true"`
 }

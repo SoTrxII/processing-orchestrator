@@ -46,7 +46,8 @@ message UpdateRequest {
   string vidDesc = 3;
   Visibility vidVisibility = 4;
   string playlistId = 5;
-  Thumbnail thumbnail = 6;
+  string playlistTitle = 6;
+  Thumbnail thumbnail = 7;
 }
 
 message Thumbnail {

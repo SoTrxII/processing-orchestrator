@@ -12,6 +12,7 @@ type UploadingService interface {
 	Upload(jobId, storageKey string, opt *processing_common.VideoOpt) (*Video, error)
 	AddToPlaylist(vidId, playlistId string) error
 	SetThumbnail(vidId, thumbKey string) error
+	CreatePlaylist(opt *processing_common.VideoOpt) (*Playlist, error)
 }
 
 const (
@@ -43,6 +44,24 @@ type Video struct {
 	ThumbnailUrl string `json:"thumbnailUrl,omitempty"`
 	// Url prefix necessary to watch the video. ie https://www.youtube.com/watch?v= for Youtube
 	WatchPrefix string `json:"watchPrefix"`
+}
+
+// Playlist A collection of videos hosted on a video storage
+// website
+type Playlist struct {
+	Id string `json:"id"`
+	// Number of video in this playlist
+	ItemCount int64 `json:"itemCount"`
+	// Playlist display name
+	Title string `json:"title" validate:"updatable"`
+	// Short description about what's in the playlist
+	Description string `json:"description" validate:"updatable"`
+	// Creation date
+	CreatedAt time.Time `json:"createdAt"`
+	// public/private/unlisted
+	Visibility processing_common.Visibility `json:"visibility" validate:"updatable"`
+	// Playlist thumbnail
+	ThumbnailUrl string `json:"thumbnailUrl,omitempty"`
 }
 
 type UploadData struct {
