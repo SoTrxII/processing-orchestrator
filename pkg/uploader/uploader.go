@@ -103,7 +103,6 @@ func (u *Uploader) Upload(jobId, storageKey string, opt *processing_common.Video
 
 func (u *Uploader) CreatePlaylist(opt *processing_common.VideoOpt) (*Playlist, error) {
 	bytes, err := json.Marshal(opt)
-
 	res, err := u.invoker.InvokeMethodWithContent(context.Background(), u.invokeComponent, "v1/playlists", "POST", &utils.DataContent{
 		ContentType: "application/json",
 		Data:        bytes,

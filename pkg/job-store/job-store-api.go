@@ -25,4 +25,6 @@ type JobState struct {
 	UserInput processing_common.UserInput
 	// Video Link as uploaded by the Uploader
 	VideoLink string
+	// Link to the created playlist if any
+	CreatedPlaylistLink string
 }

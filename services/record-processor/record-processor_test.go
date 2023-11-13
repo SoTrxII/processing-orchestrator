@@ -233,6 +233,8 @@ func TestRecordProcessor_ProcessWhole(t *testing.T) {
 		ThumbnailUrl: "",
 		WatchPrefix:  "pre",
 	}, nil)
+	mockUploader.EXPECT().CreatePlaylist(mock.Anything).Return(&uploader.Playlist{}, nil)
+	mockUploader.EXPECT().AddToPlaylist(mock.Anything, mock.Anything).Return(nil)
 	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
 	job := &job_store.JobState{
 		Id:                 "test",
@@ -280,6 +282,8 @@ func TestRecordProcessor_ProcessWhole_WithThumbnailAddon(t *testing.T) {
 		ThumbnailUrl: "",
 		WatchPrefix:  "pre",
 	}, nil)
+	mockUploader.EXPECT().CreatePlaylist(mock.Anything).Return(&uploader.Playlist{}, nil)
+	mockUploader.EXPECT().AddToPlaylist(mock.Anything, mock.Anything).Return(nil)
 	mockThumbnailAddon.EXPECT().GenerateThumbnail(mock.Anything).Return("thumb", nil)
 	mockUploader.EXPECT().SetThumbnail(mock.Anything, mock.Anything).Return(nil)
 	job := &job_store.JobState{
@@ -320,6 +324,8 @@ func TestRecordProcessor_ProcessWhole_ErrorThumbnailAddon(t *testing.T) {
 		ThumbnailUrl: "",
 		WatchPrefix:  "pre",
 	}, nil)
+	mockUploader.EXPECT().CreatePlaylist(mock.Anything).Return(&uploader.Playlist{}, nil)
+	mockUploader.EXPECT().AddToPlaylist(mock.Anything, mock.Anything).Return(nil)
 	mockThumbnailAddon.EXPECT().GenerateThumbnail(mock.Anything).Return("", fmt.Errorf("test"))
 	mockUploader.EXPECT().SetThumbnail(mock.Anything, mock.Anything).Return(nil)
 	job := &job_store.JobState{
@@ -361,7 +367,8 @@ func TestRecordProcessor_ProcessWhole_ErrorSetThumbnail(t *testing.T) {
 		ThumbnailUrl: "",
 		WatchPrefix:  "pre",
 	}, nil)
-
+	mockUploader.EXPECT().CreatePlaylist(mock.Anything).Return(&uploader.Playlist{}, nil)
+	mockUploader.EXPECT().AddToPlaylist(mock.Anything, mock.Anything).Return(nil)
 	mockThumbnailAddon.EXPECT().GenerateThumbnail(mock.Anything).Return("thumb", nil)
 	mockUploader.EXPECT().SetThumbnail(mock.Anything, mock.Anything).Return(fmt.Errorf("test"))
 	job := &job_store.JobState{

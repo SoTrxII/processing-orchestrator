@@ -42,16 +42,18 @@ func (s Step) ToString() string {
 }
 
 type ServiceProgress struct {
-	JobId       string
-	Step        Step
-	CurrentItem string
-	Error       error
-	Progress    string
-	Link        string
+	JobId               string
+	Step                Step
+	CurrentItem         string
+	Error               error
+	Progress            string
+	Link                string
+	CreatedPlaylistLink string
 }
 
 type DoneData struct {
-	Link string `json:"link"`
+	Link                string `json:"link"`
+	CreatedPlayListLink string `json:"createdPlaylist"`
 }
 
 type DoneEvent struct {
@@ -61,12 +63,13 @@ type DoneEvent struct {
 
 func (e *DoneEvent) ToProgress() *ServiceProgress {
 	pg := ServiceProgress{
-		JobId:       e.JobId,
-		Step:        StepDone,
-		CurrentItem: "",
-		Error:       nil,
-		Progress:    "",
-		Link:        e.Data.Link,
+		JobId:               e.JobId,
+		Step:                StepDone,
+		CurrentItem:         "",
+		Error:               nil,
+		Progress:            "",
+		Link:                e.Data.Link,
+		CreatedPlaylistLink: e.Data.CreatedPlayListLink,
 	}
 	return &pg
 }

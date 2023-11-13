@@ -62,6 +62,8 @@ type Playlist struct {
 	Visibility processing_common.Visibility `json:"visibility" validate:"updatable"`
 	// Playlist thumbnail
 	ThumbnailUrl string `json:"thumbnailUrl,omitempty"`
+	// Url prefix necessary to watch the playlist. ie https://www.youtube.com/playlist?list= for Youtube
+	WatchPrefix string `json:"watchPrefix"`
 }
 
 type UploadData struct {

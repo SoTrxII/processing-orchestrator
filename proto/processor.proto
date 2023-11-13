@@ -22,6 +22,9 @@ message ProcessingStatus {
   string progress = 8;
   // Final video link, only available when done is true
   string link = 9;
+  // Created playlist link, only available when done is true
+  // Can be empty if no playlist was created
+  string createdPlaylistLink = 10;
 }
 
 message ProcessRequest {
