@@ -245,9 +245,10 @@ func (rp *RecordProcessor) upload(job *job_store.JobState) error {
 // Return the playlist if it was created, nil otherwise
 func (rp *RecordProcessor) addVidToPlaylist(jobId, vidId string, opt *processing_common.VideoOpt) (*uploader.Playlist, error) {
 	var playlist *uploader.Playlist
+	var err error
 	if opt.PlaylistId == "" {
 		slog.Info(fmt.Sprintf("[RecordProcessor] :: job %s :: No playlist provided, creating playlist", jobId))
-		playlist, err := rp.uploader.CreatePlaylist(&processing_common.VideoOpt{
+		playlist, err = rp.uploader.CreatePlaylist(&processing_common.VideoOpt{
 			Description: opt.Description,
 			Title:       opt.PlaylistTitle,
 			Visibility:  opt.Visibility,
@@ -259,7 +260,7 @@ func (rp *RecordProcessor) addVidToPlaylist(jobId, vidId string, opt *processing
 		slog.Info(fmt.Sprintf("[RecordProcessor] :: job %s :: Playlist created with id %s", jobId, opt.PlaylistId))
 	}
 	slog.Info(fmt.Sprintf("[RecordProcessor] :: job %s :: Adding video to playlist %s", jobId, opt.PlaylistId))
-	err := rp.uploader.AddToPlaylist(vidId, opt.PlaylistId)
+	err = rp.uploader.AddToPlaylist(vidId, opt.PlaylistId)
 	return playlist, err
 }
 

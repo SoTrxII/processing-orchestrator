@@ -412,3 +412,48 @@ func TestRecordProcessor_UpdateInfos(t *testing.T) {
 	assert.NoError(t, err)
 	mockStore.AssertExpectations(t)
 }
+
+func TestRecordProcessor_ReturnPlaylist(t *testing.T) {
+	mockCooker := &test_utils.MockCookingService{}
+	mockEncoder := &test_utils.MockEncodingService{}
+	mockUploader := &test_utils.MockUploadingService{}
+	evtCh := make(chan processing_common.Watchable, 1)
+	mockStore := &test_utils.MockJobStore{}
+	rp := NewRecordProcessor(mockCooker, mockEncoder, mockUploader, evtCh, mockStore, Addons{})
+
+	mockUploader.EXPECT().Upload(mock.Anything, mock.Anything, mock.Anything).Return(&uploader.Video{
+		Id:           "fix",
+		Title:        "",
+		Description:  "",
+		CreatedAt:    time.Time{},
+		Duration:     0,
+		Visibility:   "",
+		ThumbnailUrl: "",
+		WatchPrefix:  "pre",
+	}, nil)
+	mockUploader.EXPECT().CreatePlaylist(mock.Anything).Return(&uploader.Playlist{
+		Id:          "test",
+		WatchPrefix: "prefix",
+	}, nil)
+	mockUploader.EXPECT().AddToPlaylist(mock.Anything, mock.Anything).Return(nil)
+	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
+	job := &job_store.JobState{
+		Id:                 "test",
+		Step:               processing_common.StepUploading,
+		RawAudioKeys:       []string{"raw"},
+		CookedAudioKeys:    nil,
+		BackgroundAudioKey: "",
+		VideoKey:           "",
+	}
+	err := rp.Process(job)
+	select {
+	case evt := <-evtCh:
+		pg := evt.ToProgress()
+		assert.Equal(t, processing_common.StepDone, pg.Step)
+		assert.Equal(t, "prefixtest", pg.CreatedPlaylistLink)
+	case <-time.After(1 * time.Second):
+		// Event not received
+		t.Fail()
+	}
+	assert.NoError(t, err)
+}
