@@ -93,10 +93,11 @@ func (s *server) UpdateInfo(ctx context.Context, req *pb.UpdateRequest) (*pb.Upd
 	}
 	err := s.processor.UpdateInfos(req.Id, processing_common.UserInput{
 		Vid: processing_common.VideoOpt{
-			Description: req.VidDesc,
-			Title:       req.VidTitle,
-			Visibility:  pVis,
-			PlaylistId:  req.PlaylistId,
+			Description:   req.VidDesc,
+			Title:         req.VidTitle,
+			Visibility:    pVis,
+			PlaylistId:    req.PlaylistId,
+			PlaylistTitle: req.PlaylistTitle,
 			Thumbnail: processing_common.ThumbnailOpt{
 				Title:    req.Thumbnail.Title,
 				SubTitle: req.Thumbnail.Subtitle,
