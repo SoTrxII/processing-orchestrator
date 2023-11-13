@@ -53,7 +53,7 @@ type ServiceProgress struct {
 
 type DoneData struct {
 	Link                string `json:"link"`
-	CreatedPlayListLink string `json:"createdPlaylist"`
+	CreatedPlaylistLink string `json:"createdPlaylistLink"`
 }
 
 type DoneEvent struct {
@@ -69,7 +69,7 @@ func (e *DoneEvent) ToProgress() *ServiceProgress {
 		Error:               nil,
 		Progress:            "",
 		Link:                e.Data.Link,
-		CreatedPlaylistLink: e.Data.CreatedPlayListLink,
+		CreatedPlaylistLink: e.Data.CreatedPlaylistLink,
 	}
 	return &pg
 }

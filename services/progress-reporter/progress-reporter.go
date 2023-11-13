@@ -56,15 +56,16 @@ func (pr *ProgressReporter) AddInfo(jobId string, audiosKeys []string) {
 func (pr *ProgressReporter) toStatus(pg *processing_common.ServiceProgress) *pb.ProcessingStatus {
 
 	pb := pb.ProcessingStatus{
-		Id:               pg.JobId,
-		Error:            "",
-		StepsList:        steps,
-		CurrentStepIndex: uint32(pg.Step),
-		ItemList:         nil,
-		CurrentItemIndex: 0,
-		Done:             false,
-		Progress:         pg.Progress,
-		Link:             pg.Link,
+		Id:                  pg.JobId,
+		Error:               "",
+		StepsList:           steps,
+		CurrentStepIndex:    uint32(pg.Step),
+		ItemList:            nil,
+		CurrentItemIndex:    0,
+		Done:                false,
+		Progress:            pg.Progress,
+		Link:                pg.Link,
+		CreatedPlaylistLink: pg.CreatedPlaylistLink,
 	}
 
 	switch pg.Step {

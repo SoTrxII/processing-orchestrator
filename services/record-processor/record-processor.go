@@ -128,7 +128,7 @@ func (rp *RecordProcessor) Process(job *job_store.JobState) error {
 			Link: job.VideoLink,
 			// This can be equal to "" if no playlist was created
 			// which means the user provided one
-			CreatedPlayListLink: job.CreatedPlaylistLink,
+			CreatedPlaylistLink: job.CreatedPlaylistLink,
 		},
 	}
 	slog.Info(fmt.Sprintf("[RecordProcessor] :: Processing done for job %s", job.Id))
