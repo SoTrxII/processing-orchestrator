@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/dapr/go-sdk/service/common"
+	"processing-orchestrator/internal/demux"
 	"processing-orchestrator/internal/utils"
 	processing_common "processing-orchestrator/pkg/processing-common"
 )
@@ -13,8 +14,8 @@ type Uploader struct {
 	invoker         utils.Invoker
 	invokeComponent string
 	subComponent    string
-	// Events received from the Cooking Server
-	events chan UploadEvent
+	// Events received from the video store, routed to the job they belong to
+	events *demux.Demux[UploadEvent]
 	// Channel to send progress to
 	progressCh chan processing_common.Watchable
 }
@@ -24,7 +25,7 @@ func NewUploader(invoker utils.Invoker, invokeComponent, subComponent string, pr
 		invoker:         invoker,
 		invokeComponent: invokeComponent,
 		subComponent:    subComponent,
-		events:          make(chan UploadEvent, 50),
+		events:          demux.New[UploadEvent](),
 		progressCh:      progressCh,
 	}
 }
@@ -45,17 +46,14 @@ func (c *Uploader) onInfo(ctx context.Context, e *common.TopicEvent) (retry bool
 	if err != nil {
 		return false, err
 	}
-	c.events <- evt
+	c.events.Dispatch(evt.JobId, evt)
 	return false, nil
 }
-func (u *Uploader) handleEvents(ctx context.Context, jobId string) {
+func (u *Uploader) handleEvents(ctx context.Context, events <-chan UploadEvent) {
 Loop:
 	for {
 		select {
-		case evt := <-u.events:
-			if evt.JobId != jobId {
-				continue
-			}
+		case evt := <-events:
 			// The "Done event" from upstream is not propagated
 			// for this one, as we will send our own
 			/// forged "Done event" when the upload is finished
@@ -67,15 +65,21 @@ Loop:
 				break Loop
 			}
 		case <-ctx.Done():
+			break Loop
 		}
 	}
 }
 
 func (u *Uploader) Upload(jobId, storageKey string, opt *processing_common.VideoOpt) (*Video, error) {
+	// Claim the events of this job before asking for the work to be done, so
+	// that none of them can be missed
+	events, release := u.events.Register(jobId)
+	defer release()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	// So even if an error happen, the goroutine will be cleaned up
 	defer cancel()
-	go u.handleEvents(ctx, jobId)
+	go u.handleEvents(ctx, events)
 
 	uploadJob := UploadJob{
 		VideoOpt:   *opt,
