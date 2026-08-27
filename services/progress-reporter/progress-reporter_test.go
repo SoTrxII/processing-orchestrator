@@ -5,7 +5,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"processing-orchestrator/pkg/cooker"
 	processing_common "processing-orchestrator/pkg/processing-common"
+	pb "processing-orchestrator/proto"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestProgressReporter_ToStatus(t *testing.T) {
@@ -77,4 +80,65 @@ func TestProgressReporter_Start(t *testing.T) {
 		},
 	}
 
+}
+
+func TestProgressReporter_DropsAClientThatStoppedWatching(t *testing.T) {
+	evtCh := make(chan processing_common.Watchable, 1)
+	rep := NewProgressReporter(evtCh)
+
+	com := &BidirectionalCom{
+		Data: make(chan *pb.ProcessingStatus, 1),
+		Done: make(chan struct{}),
+	}
+	rep.Register("test", com)
+	// The client is gone. Writing to a channel it closed on its way out used
+	// to take the whole process down
+	close(com.Done)
+
+	rep.broadcast("test", &pb.ProcessingStatus{Id: "test"})
+
+	assert.Len(t, com.Data, 0)
+	rep.mu.Lock()
+	defer rep.mu.Unlock()
+	assert.NotContains(t, rep.jobWatchers, "test")
+}
+
+// Clients register from their own gRPC handler while the reporting loop reads
+// and prunes them, and each of them only ever wants its own job
+func TestProgressReporter_ConcurrentJobs(t *testing.T) {
+	evtCh := make(chan processing_common.Watchable, 100)
+	rep := NewProgressReporter(evtCh)
+	go rep.Start()
+
+	var wg sync.WaitGroup
+	for i := 0; i < 20; i++ {
+		jobId := fmt.Sprintf("job-%d", i)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			com := &BidirectionalCom{
+				Data: make(chan *pb.ProcessingStatus, 10),
+				Done: make(chan struct{}),
+			}
+			defer close(com.Done)
+			rep.Register(jobId, com)
+			rep.AddInfo(jobId, []string{"a"})
+
+			evtCh <- &cooker.CookingEvent{
+				ServiceEvent: processing_common.ServiceEvent{
+					JobId: jobId,
+					State: processing_common.InProgress,
+				},
+				RecordId: "a",
+			}
+
+			select {
+			case <-time.After(5 * time.Second):
+				t.Errorf("job %s never got its progress", jobId)
+			case status := <-com.Data:
+				assert.Equal(t, jobId, status.Id)
+			}
+		}()
+	}
+	wg.Wait()
 }

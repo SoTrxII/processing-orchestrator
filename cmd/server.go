@@ -44,11 +44,12 @@ type server struct {
 
 func (s *server) Watch(req *pb.WatchRequest, stream pb.Processor_WatchServer) error {
 	com := &progress_reporter.BidirectionalCom{
-		Data:   make(chan *pb.ProcessingStatus, 20),
-		Canary: make(chan bool, 1),
+		Data: make(chan *pb.ProcessingStatus, 20),
+		Done: make(chan struct{}),
 	}
-	defer close(com.Canary)
-	defer close(com.Data)
+	// Tells the reporter we stopped watching. Data is never closed here : the
+	// reporter is the one writing to it
+	defer close(com.Done)
 	s.progressRep.Register(req.Id, com)
 
 	for {
