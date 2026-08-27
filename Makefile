@@ -6,8 +6,10 @@ proto:
 mocks:
 	mockery
 
+# -race is what catches jobs stepping on each other, which unit tests on their
+# own cannot see
 test:
-	go test -v ./... -covermode=atomic -coverprofile=coverage.out
+	go test -v ./... -race -covermode=atomic -coverprofile=coverage.out
 
 dapr_run:
 	dapr run --app-id=processing-orchestrator --app-protocol=grpc --app-port 55556 --dapr-grpc-port 50012 --resources-path ./dapr/components -- go run cmd/server.go
