@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/dapr/go-sdk/service/common"
+	"processing-orchestrator/internal/demux"
 	"processing-orchestrator/internal/utils"
 	processing_common "processing-orchestrator/pkg/processing-common"
 )
@@ -13,8 +14,8 @@ type Cooker struct {
 	pubClient    utils.Publisher
 	pubComponent string
 	subComponent string
-	// Events received from the Cooking Server
-	events chan CookingEvent
+	// Events received from the Cooking Server, routed to the job they belong to
+	events *demux.Demux[CookingEvent]
 	// Channel to send progress to
 	progressCh chan processing_common.Watchable
 	opt        *CookerOpt
@@ -26,7 +27,7 @@ func NewCooker(pubClient utils.Publisher, pubComponent, subComponent string, pro
 		pubClient:    pubClient,
 		pubComponent: pubComponent,
 		subComponent: subComponent,
-		events:       make(chan CookingEvent, 50),
+		events:       demux.New[CookingEvent](),
 		progressCh:   progressCh,
 		opt: &CookerOpt{
 			Extension: ".ogg",
@@ -51,11 +52,16 @@ func (c *Cooker) onInfo(ctx context.Context, e *common.TopicEvent) (retry bool, 
 	if err != nil {
 		return false, err
 	}
-	c.events <- evt
+	c.events.Dispatch(evt.JobId, evt)
 	return false, nil
 }
 
 func (c *Cooker) Cook(jobId string, recordIds []string) ([]string, error) {
+	// Claim the events of this job before asking for the work to be done, so
+	// that none of them can be missed
+	events, release := c.events.Register(jobId)
+	defer release()
+
 	err := c.pubClient.PublishEvent(context.Background(), c.pubComponent, p_Start, CookingJob{
 		JobId: jobId,
 		Ids:   recordIds,
@@ -86,10 +92,7 @@ func (c *Cooker) Cook(jobId string, recordIds []string) ([]string, error) {
 			return cookedKeys, nil
 
 		// A new event is received
-		case evt, _ := <-c.events:
-			if evt.JobId != jobId {
-				continue
-			}
+		case evt, _ := <-events:
 			c.progressCh <- &evt
 			// That can be a done event
 			switch evt.State {
