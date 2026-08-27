@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/dapr/go-sdk/service/common"
+	"processing-orchestrator/internal/demux"
 	"processing-orchestrator/internal/utils"
 	processing_common "processing-orchestrator/pkg/processing-common"
 )
@@ -13,8 +14,8 @@ type Encoder struct {
 	pubClient    utils.Publisher
 	pubComponent string
 	subComponent string
-	// Events received from the Cooking Server
-	events chan EncodingEvent
+	// Events received from the encoding service, routed to the job they belong to
+	events *demux.Demux[EncodingEvent]
 	// Channel to send progress to
 	progressCh chan processing_common.Watchable
 	opt        *EncoderOpt
@@ -26,7 +27,7 @@ func NewEncoder(pubClient utils.Publisher, pubComponent, subComponent string, pr
 		pubClient:    pubClient,
 		pubComponent: pubComponent,
 		subComponent: subComponent,
-		events:       make(chan EncodingEvent, 50),
+		events:       demux.New[EncodingEvent](),
 		progressCh:   progressCh,
 		opt: &EncoderOpt{
 			Extension: ".mp4",
@@ -51,11 +52,16 @@ func (c *Encoder) onInfo(ctx context.Context, e *common.TopicEvent) (retry bool,
 	if err != nil {
 		return false, err
 	}
-	c.events <- evt
+	c.events.Dispatch(evt.JobId, evt)
 	return false, nil
 }
 
 func (c *Encoder) Encode(jobId string, audioKeys []string, bgAudioKey string) (string, error) {
+	// Claim the events of this job before asking for the work to be done, so
+	// that none of them can be missed
+	events, release := c.events.Register(jobId)
+	defer release()
+
 	err := c.pubClient.PublishEvent(context.Background(), c.pubComponent, p_Start, EncodeJob{
 		JobId:              jobId,
 		AudiosKeys:         audioKeys,
@@ -70,10 +76,7 @@ func (c *Encoder) Encode(jobId string, audioKeys []string, bgAudioKey string) (s
 	extension := c.opt.Extension
 	for {
 		select {
-		case evt := <-c.events:
-			if evt.JobId != jobId {
-				continue
-			}
+		case evt := <-events:
 			c.progressCh <- &evt
 			switch evt.State {
 			case processing_common.Done:

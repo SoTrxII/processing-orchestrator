@@ -33,6 +33,8 @@ func TestEncoder_Start(t *testing.T) {
 		done <- true
 	}()
 
+	waitUntilWaiting(t, encoder, "1")
+
 	// Record has finished encoding
 	data := getDoneEvt("1")
 	_, err := encoder.onInfo(nil, &common.TopicEvent{RawData: data})
@@ -61,6 +63,8 @@ func TestEncoder_ErrorDuringEncoding(t *testing.T) {
 		assert.Empty(t, videoKey)
 		done <- true
 	}()
+
+	waitUntilWaiting(t, encoder, "1")
 
 	// Record has encountered an error during encoding
 	data := getErrorEvt("1")
@@ -148,4 +152,13 @@ func getErrorEvt(jobId string) []byte {
 		panic(err)
 	}
 	return rawEvt
+}
+
+// waitUntilWaiting blocks until the job started waiting for its events, which
+// only happens once the Encode goroutine has been scheduled. Events published
+// before that point belong to nobody and are dropped
+func waitUntilWaiting(t *testing.T, encoder *Encoder, jobId string) {
+	assert.Eventually(t, func() bool {
+		return encoder.events.IsWaiting(jobId)
+	}, 5*time.Second, 10*time.Millisecond)
 }
