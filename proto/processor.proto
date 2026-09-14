@@ -51,6 +51,17 @@ message UpdateRequest {
   string playlistId = 5;
   string playlistTitle = 6;
   Thumbnail thumbnail = 7;
+  // Absent when this recording should not be summarized
+  Summary summary = 8;
+}
+
+// Where a recording sits in a campaign's history. This is all the summarizer
+// needs to file it: the recording itself it reads from the object store.
+message Summary {
+  uint32 campaignId = 1;
+  uint32 episodeId = 2;
+  // A one-shot is standalone, so there is no campaign narrative to rebuild
+  bool isOneShot = 3;
 }
 
 message Thumbnail {

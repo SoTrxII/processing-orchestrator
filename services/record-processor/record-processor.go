@@ -8,6 +8,7 @@ import (
 	"processing-orchestrator/pkg/encoder"
 	job_store "processing-orchestrator/pkg/job-store"
 	"processing-orchestrator/pkg/processing-common"
+	"processing-orchestrator/pkg/summarizer"
 	thumb_generator "processing-orchestrator/pkg/thumb-generator"
 	"processing-orchestrator/pkg/uploader"
 )
@@ -160,7 +161,42 @@ func (rp *RecordProcessor) cook(job *job_store.JobState) error {
 	if err != nil {
 		slog.Warn(fmt.Sprintf("[RecordProcessor] :: while saving job map: %s", err.Error()))
 	}
+
+	// The audio is usable from here on, and transcribing it takes the better
+	// part of a day : starting now buys the whole of encoding and uploading
+	// as a head start. Nothing downstream waits for it.
+	rp.summarize(job)
 	return nil
+}
+
+// summarize hands the cooked recording to the summarizer, if there is one and
+// the caller asked for it. Failures are logged and swallowed : the video is
+// what the user is waiting for, and losing a summary must not lose that too.
+func (rp *RecordProcessor) summarize(job *job_store.JobState) {
+	if rp.addons.Summarizer == nil {
+		return
+	}
+	// UpdateInfo is what carries this, and it arrives on its own schedule.
+	// In practice the caller sends it immediately after submitting, long
+	// before cooking ends, but a recording nobody claimed simply isn't
+	// summarized rather than being filed under the wrong campaign.
+	opt := job.UserInput.Summary
+	if opt == nil {
+		slog.Info(fmt.Sprintf("[RecordProcessor] :: Skipping summary for job %s, no campaign was given", job.Id))
+		return
+	}
+
+	slog.Info(fmt.Sprintf("[RecordProcessor] :: Submitting job %s for summary (campaign %d, episode %d)", job.Id, opt.CampaignId, opt.EpisodeId))
+	err := rp.addons.Summarizer.Submit(&summarizer.SummaryJob{
+		JobId:      job.Id,
+		CampaignId: opt.CampaignId,
+		EpisodeId:  opt.EpisodeId,
+		IsOneShot:  opt.IsOneShot,
+		AudioKeys:  job.CookedAudioKeys,
+	})
+	if err != nil {
+		slog.Warn(fmt.Sprintf("[RecordProcessor] :: while submitting job %s for summary : %s", job.Id, err.Error()))
+	}
 }
 
 func (rp *RecordProcessor) encode(job *job_store.JobState) error {

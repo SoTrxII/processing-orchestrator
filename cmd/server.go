@@ -17,6 +17,7 @@ import (
 	"processing-orchestrator/pkg/encoder"
 	job_store "processing-orchestrator/pkg/job-store"
 	processing_common "processing-orchestrator/pkg/processing-common"
+	"processing-orchestrator/pkg/summarizer"
 	thumb_generator "processing-orchestrator/pkg/thumb-generator"
 	"processing-orchestrator/pkg/uploader"
 	pb "processing-orchestrator/proto"
@@ -31,6 +32,7 @@ const (
 	// Dapr services app ids
 	// TODO :: Move these to env vars
 	DEFAULT_UPLOADER_ID           = "video-store"
+	DEFAULT_SUMMARIZER_ID         = "summary-orchestrator"
 	DEFAULT_PUB_COMPONENT         = "message-queue"
 	DEFAULT_SUB_COMPONENT         = "pubsub"
 	DEFAULT_STATE_STORE_COMPONENT = "statestore"
@@ -92,7 +94,19 @@ func (s *server) UpdateInfo(ctx context.Context, req *pb.UpdateRequest) (*pb.Upd
 	} else if req.VidVisibility == pb.Visibility_PRIVATE {
 		pVis = processing_common.Private
 	}
+	// A request with no summary block is one that must not be summarized,
+	// so this stays nil rather than being filled with zeroes
+	var summary *processing_common.SummaryOpt
+	if req.Summary != nil {
+		summary = &processing_common.SummaryOpt{
+			CampaignId: int(req.Summary.CampaignId),
+			EpisodeId:  int(req.Summary.EpisodeId),
+			IsOneShot:  req.Summary.IsOneShot,
+		}
+	}
+
 	err := s.processor.UpdateInfos(req.Id, processing_common.UserInput{
+		Summary: summary,
 		Vid: processing_common.VideoOpt{
 			Description:   req.VidDesc,
 			Title:         req.VidTitle,
@@ -150,6 +164,7 @@ type env struct {
 	// Dapr components ids
 	daprCpnUploader string
 	daprCpnThumbGen string
+	daprCpnSummary  string
 	daprCpnPub      string
 	daprCpnSub      string
 	daprCpnState    string
@@ -161,6 +176,7 @@ func parseEnv() *env {
 		daprGrpcPort:    DEFAULT_DAPR_PORT,
 		daprCpnUploader: DEFAULT_UPLOADER_ID,
 		daprCpnThumbGen: "",
+		daprCpnSummary:  DEFAULT_SUMMARIZER_ID,
 		daprCpnPub:      DEFAULT_PUB_COMPONENT,
 		daprCpnSub:      DEFAULT_SUB_COMPONENT,
 		daprCpnState:    DEFAULT_STATE_STORE_COMPONENT,
@@ -177,6 +193,11 @@ func parseEnv() *env {
 	}
 	if id, isDefined := os.LookupEnv("THUMB_GEN_NAME"); isDefined && id != "" {
 		pEnv.daprCpnThumbGen = id
+	}
+	// Unlike the others, this one can be emptied on purpose : an empty
+	// SUMMARIZER_NAME turns summarizing off entirely
+	if id, isDefined := os.LookupEnv("SUMMARIZER_NAME"); isDefined {
+		pEnv.daprCpnSummary = id
 	}
 	if id, isDefined := os.LookupEnv("PUBSUB_NAME"); isDefined && id != "" {
 		pEnv.daprCpnPub = id
@@ -220,6 +241,11 @@ func DI(subServer common.Service, env *env) (*record_processor.RecordProcessor, 
 	addons := record_processor.Addons{}
 	if env.daprCpnThumbGen != "" {
 		addons.ThumbGen = thumb_generator.NewThumbGenerator(fmt.Sprintf("localhost:%d", env.daprGrpcPort), env.daprCpnThumbGen)
+	}
+	if env.daprCpnSummary != "" {
+		addons.Summarizer = summarizer.NewSummarizer(daprClient, env.daprCpnSummary)
+	} else {
+		slog.Info("[Main] :: No summarizer configured, recordings will not be summarized")
 	}
 
 	return record_processor.NewRecordProcessor(cook, encode, upload, progressCh, store, addons), reporter, nil

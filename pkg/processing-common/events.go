@@ -115,4 +115,19 @@ type ThumbnailOpt struct {
 
 type UserInput struct {
 	Vid VideoOpt
+	// Where this recording sits in a campaign's history. Nil when the caller
+	// did not ask for a summary, which is the only way to opt out : there is
+	// no campaign 0.
+	Summary *SummaryOpt
+}
+
+// SummaryOpt is everything the summarizer needs to file a recording. The
+// audio it reads from the object store itself, so only the bookkeeping
+// travels.
+type SummaryOpt struct {
+	CampaignId int `json:"campaignId"`
+	// Episode number within the campaign, as the caller counted it
+	EpisodeId int `json:"episodeId"`
+	// A one-shot is standalone : there is no campaign narrative to rebuild
+	IsOneShot bool `json:"isOneShot"`
 }

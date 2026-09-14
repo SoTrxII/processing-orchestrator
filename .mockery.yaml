@@ -29,3 +29,7 @@ packages:
   processing-orchestrator/pkg/thumb-generator:
     interfaces:
       ThumbGenService:
+
+  processing-orchestrator/pkg/summarizer:
+    interfaces:
+      SummarizingService:
