@@ -130,4 +130,10 @@ type SummaryOpt struct {
 	EpisodeId int `json:"episodeId"`
 	// A one-shot is standalone : there is no campaign narrative to rebuild
 	IsOneShot bool `json:"isOneShot"`
+	// Discord ids of whoever runs this campaign, supplied by the caller.
+	//
+	// Velvet owns the rpg database and reads playercampaign.isgm there; this
+	// carries the answer rather than giving the summarizer its own connection
+	// to a schema it does not own. Empty is normal and means nobody is marked.
+	GameMasterIds []string `json:"gameMasterIds"`
 }

@@ -188,11 +188,12 @@ func (rp *RecordProcessor) summarize(job *job_store.JobState) {
 
 	slog.Info(fmt.Sprintf("[RecordProcessor] :: Submitting job %s for summary (campaign %d, episode %d)", job.Id, opt.CampaignId, opt.EpisodeId))
 	err := rp.addons.Summarizer.Submit(&summarizer.SummaryJob{
-		JobId:      job.Id,
-		CampaignId: opt.CampaignId,
-		EpisodeId:  opt.EpisodeId,
-		IsOneShot:  opt.IsOneShot,
-		AudioKeys:  job.CookedAudioKeys,
+		JobId:         job.Id,
+		CampaignId:    opt.CampaignId,
+		EpisodeId:     opt.EpisodeId,
+		IsOneShot:     opt.IsOneShot,
+		AudioKeys:     job.CookedAudioKeys,
+		GameMasterIds: opt.GameMasterIds,
 	})
 	if err != nil {
 		slog.Warn(fmt.Sprintf("[RecordProcessor] :: while submitting job %s for summary : %s", job.Id, err.Error()))

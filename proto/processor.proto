@@ -62,6 +62,20 @@ message Summary {
   uint32 episodeId = 2;
   // A one-shot is standalone, so there is no campaign narrative to rebuild
   bool isOneShot = 3;
+  // Discord ids of whoever runs this campaign.
+  //
+  // Carried on the job rather than looked up downstream: Velvet owns the rpg
+  // database, and the summarizer having its own connection to it would make
+  // two services responsible for the same schema. It is one boolean column
+  // (playercampaign.isgm) that Velvet already has open in front of it.
+  //
+  // Repeated because isgm is a per-row flag, so co-GMs are representable; a
+  // scalar here would silently drop one. Empty is normal and must degrade to
+  // "nobody is marked" -- it is how every recording made before this looks.
+  //
+  // Used with the per-user speaker timeline to tell a player character from an
+  // NPC: characters voiced by these people are NPCs, everyone else's are PCs.
+  repeated string gameMasterIds = 4;
 }
 
 message Thumbnail {

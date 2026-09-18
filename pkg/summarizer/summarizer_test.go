@@ -70,3 +70,36 @@ func TestSubmitReportsAnUnreachableSummarizer(t *testing.T) {
 	assert.ErrorContains(t, err, "job-1")
 	assert.ErrorContains(t, err, "connection refused")
 }
+
+// Empty must not appear on the wire at all: a recording with no game master
+// recorded has to produce the same request as one sent before the field
+// existed, so an older summary-orchestrator keeps working during a rollout.
+func TestSubmitOmitsGameMastersWhenThereAreNone(t *testing.T) {
+	invoker := &recordingInvoker{}
+	s := NewSummarizer(invoker, "summary-orchestrator")
+
+	assert.NoError(t, s.Submit(&SummaryJob{JobId: "job-1", CampaignId: 28, EpisodeId: 11}))
+
+	var sent map[string]any
+	assert.NoError(t, json.Unmarshal(invoker.content.Data, &sent))
+	_, present := sent["gameMasterIds"]
+	assert.False(t, present, "an empty game master list must not be serialized")
+}
+
+// And must travel when there is one: this is the whole reason the summarizer
+// no longer reads Velvet's database itself.
+func TestSubmitCarriesGameMasters(t *testing.T) {
+	invoker := &recordingInvoker{}
+	s := NewSummarizer(invoker, "summary-orchestrator")
+
+	assert.NoError(t, s.Submit(&SummaryJob{
+		JobId:         "job-1",
+		CampaignId:    28,
+		EpisodeId:     11,
+		GameMasterIds: []string{"188626510901542912"},
+	}))
+
+	var sent map[string]any
+	assert.NoError(t, json.Unmarshal(invoker.content.Data, &sent))
+	assert.Equal(t, []any{"188626510901542912"}, sent["gameMasterIds"])
+}

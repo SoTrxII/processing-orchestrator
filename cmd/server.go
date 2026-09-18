@@ -99,9 +99,10 @@ func (s *server) UpdateInfo(ctx context.Context, req *pb.UpdateRequest) (*pb.Upd
 	var summary *processing_common.SummaryOpt
 	if req.Summary != nil {
 		summary = &processing_common.SummaryOpt{
-			CampaignId: int(req.Summary.CampaignId),
-			EpisodeId:  int(req.Summary.EpisodeId),
-			IsOneShot:  req.Summary.IsOneShot,
+			CampaignId:    int(req.Summary.CampaignId),
+			EpisodeId:     int(req.Summary.EpisodeId),
+			IsOneShot:     req.Summary.IsOneShot,
+			GameMasterIds: req.Summary.GameMasterIds,
 		}
 	}
 

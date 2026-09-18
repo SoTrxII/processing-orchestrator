@@ -25,6 +25,14 @@ type SummaryJob struct {
 	EpisodeId int `json:"episodeId"`
 	// A one-shot has no campaign narrative to rebuild
 	IsOneShot bool `json:"isOneShot"`
+	// Discord ids of whoever runs this campaign. Lets the summarizer tell a
+	// player character from an NPC without querying Velvet's database.
+	//
+	// omitempty so a caller that supplies none sends exactly the payload it
+	// sent before this field existed, which is what keeps a rolling deploy
+	// against an older summary-orchestrator byte-identical rather than merely
+	// tolerable.
+	GameMasterIds []string `json:"gameMasterIds,omitempty"`
 	// Keys of the cooked audio, in recording order. A session that dropped
 	// and resumed has several.
 	AudioKeys []string `json:"audioKeys"`
