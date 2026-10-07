@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"processing-orchestrator/internal/utils"
+	processing_common "processing-orchestrator/pkg/processing-common"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -102,4 +103,24 @@ func TestSubmitCarriesGameMasters(t *testing.T) {
 	var sent map[string]any
 	assert.NoError(t, json.Unmarshal(invoker.content.Data, &sent))
 	assert.Equal(t, []any{"188626510901542912"}, sent["gameMasterIds"])
+}
+
+// Same two rules for the declared characters: under the names
+// summary-orchestrator reads, and absent when there are none.
+func TestSubmitCarriesDeclaredCharacters(t *testing.T) {
+	invoker := &recordingInvoker{}
+	s := NewSummarizer(invoker, "summary-orchestrator")
+
+	assert.NoError(t, s.Submit(&SummaryJob{
+		JobId:      "job-1",
+		Characters: []processing_common.Character{{Name: "Kit", Player: "sotrx"}},
+	}))
+	var sent map[string]any
+	assert.NoError(t, json.Unmarshal(invoker.content.Data, &sent))
+	assert.Equal(t, []any{map[string]any{"name": "Kit", "player": "sotrx"}}, sent["characters"])
+
+	assert.NoError(t, s.Submit(&SummaryJob{JobId: "job-2"}))
+	sent = map[string]any{}
+	assert.NoError(t, json.Unmarshal(invoker.content.Data, &sent))
+	assert.NotContains(t, sent, "characters")
 }

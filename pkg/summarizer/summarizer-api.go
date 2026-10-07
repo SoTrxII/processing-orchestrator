@@ -1,5 +1,7 @@
 package summarizer
 
+import processing_common "processing-orchestrator/pkg/processing-common"
+
 // SummarizingService hands a finished recording over to be summarized.
 //
 // It is deliberately fire-and-forget : summarizing a session is hours of
@@ -33,6 +35,9 @@ type SummaryJob struct {
 	// against an older summary-orchestrator byte-identical rather than merely
 	// tolerable.
 	GameMasterIds []string `json:"gameMasterIds,omitempty"`
+	// Who plays whom in this campaign, for the summarizer to draft its cast
+	// from. omitempty for the same reason as GameMasterIds.
+	Characters []processing_common.Character `json:"characters,omitempty"`
 	// Keys of the cooked audio, in recording order. A session that dropped
 	// and resumed has several.
 	AudioKeys []string `json:"audioKeys"`

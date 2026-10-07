@@ -76,6 +76,24 @@ message Summary {
   // Used with the per-user speaker timeline to tell a player character from an
   // NPC: characters voiced by these people are NPCs, everyone else's are PCs.
   repeated string gameMasterIds = 4;
+  // Who plays whom in this campaign, as a game master declared it to Velvet.
+  //
+  // On the job for the same reason as gameMasterIds: the table is Velvet's.
+  // It is the whole campaign's list, not that of the players heard in this
+  // recording -- the summarizer keeps one cast per campaign and redrafts it at
+  // every episode, so a list cut down to who showed up would demote the
+  // character of anyone who missed a session.
+  //
+  // Empty is normal: nobody declared any, or the campaign is a one-shot, where
+  // a list per campaign cannot say who is at the table tonight.
+  repeated Character characters = 5;
+}
+
+message Character {
+  string name = 1;
+  // Discord username of whoever plays it, not their id: the username is the
+  // label this person's lines carry in the transcript.
+  string player = 2;
 }
 
 message Thumbnail {

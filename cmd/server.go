@@ -104,6 +104,10 @@ func (s *server) UpdateInfo(ctx context.Context, req *pb.UpdateRequest) (*pb.Upd
 			IsOneShot:     req.Summary.IsOneShot,
 			GameMasterIds: req.Summary.GameMasterIds,
 		}
+		for _, c := range req.Summary.Characters {
+			summary.Characters = append(summary.Characters,
+				processing_common.Character{Name: c.Name, Player: c.Player})
+		}
 	}
 
 	err := s.processor.UpdateInfos(req.Id, processing_common.UserInput{

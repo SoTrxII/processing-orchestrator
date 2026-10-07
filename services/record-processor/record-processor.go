@@ -194,6 +194,7 @@ func (rp *RecordProcessor) summarize(job *job_store.JobState) {
 		IsOneShot:     opt.IsOneShot,
 		AudioKeys:     job.CookedAudioKeys,
 		GameMasterIds: opt.GameMasterIds,
+		Characters:    opt.Characters,
 	})
 	if err != nil {
 		slog.Warn(fmt.Sprintf("[RecordProcessor] :: while submitting job %s for summary : %s", job.Id, err.Error()))

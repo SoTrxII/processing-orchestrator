@@ -136,4 +136,15 @@ type SummaryOpt struct {
 	// carries the answer rather than giving the summarizer its own connection
 	// to a schema it does not own. Empty is normal and means nobody is marked.
 	GameMasterIds []string `json:"gameMasterIds"`
+	// Who plays whom in this campaign, as a game master declared it to Velvet.
+	// Relayed as it came, for the same reason as GameMasterIds.
+	Characters []Character `json:"characters"`
+}
+
+// Character is one declared player character. The field names are the wire
+// contract with summary-orchestrator, like the rest of summarizer.SummaryJob.
+type Character struct {
+	Name string `json:"name"`
+	// Discord username of whoever plays it
+	Player string `json:"player"`
 }
