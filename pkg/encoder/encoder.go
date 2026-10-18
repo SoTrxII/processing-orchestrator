@@ -35,8 +35,8 @@ func NewEncoder(pubClient utils.Publisher, pubComponent, subComponent string, pr
 			// encode-box takes one job at a time (prefetchCount 1), so a job
 			// queued behind another hears nothing until it starts, and an encode
 			// with the picture takes about 25 min. Asking again a job that was
-			// only queued costs a second encode of the same file : nothing is
-			// deleted (deleteAssetsFromObjStore is unexported, so never sent)
+			// only queued costs a second encode of the same file, whose inputs
+			// encode-box leaves in place
 			Silence: 30 * time.Minute,
 		},
 	}
@@ -74,7 +74,6 @@ func (c *Encoder) Encode(jobId string, audioKeys []string, bgAudioKey string) (s
 			JobId:              jobId,
 			AudiosKeys:         audioKeys,
 			BackgroundAudioKey: bgAudioKey,
-			Opt:                EncodeJobOpt{deleteAssetsFromObjStore: true},
 		})
 	}
 	if err := publish(); err != nil {

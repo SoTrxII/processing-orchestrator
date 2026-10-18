@@ -29,11 +29,6 @@ type EncoderOpt struct {
 	// asked again
 	Silence time.Duration
 }
-type EncodeJobOpt struct {
-	/** Whether to delete used assets (videoKey, audioKeys and ImageKey)
-	 * from the remote object storage. Default is false */
-	deleteAssetsFromObjStore bool
-}
 type EncodeJob struct {
 	/** UUID of the processing job */
 	JobId string `json:"jobId"`
@@ -45,8 +40,6 @@ type EncodeJob struct {
 	BackgroundAudioKey string `json:"backgroundAudioKey" omitempty:"true"`
 	/** Storage backend retrieval keys for the image track */
 	ImageKey string `json:"imageKey" omitempty:"true"`
-	/** Options for the encoding job */
-	Opt EncodeJobOpt `json:"options"`
 }
 
 type EncodingData struct {
