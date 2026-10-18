@@ -148,6 +148,12 @@ func (rp *RecordProcessor) UpdateInfos(jobId string, userInput processing_common
 	if err != nil {
 		return err
 	}
+	// A failed job is deleted, and since cooking-server 2.5.6 a refused cook
+	// fails in under a second: the UpdateInfo Velvet sends right after Start
+	// can find nothing. Dereferenced, that nil took the whole server down
+	if job == nil {
+		return fmt.Errorf("unknown job %s : it failed, or was never submitted", jobId)
+	}
 	job.UserInput = userInput
 	err = rp.store.Upsert(job)
 	if err != nil {

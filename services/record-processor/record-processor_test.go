@@ -473,3 +473,11 @@ func TestRecordProcessor_FailedJobReachesWatchers(t *testing.T) {
 	assert.Equal(t, "test", pg.JobId)
 	assert.ErrorContains(t, pg.Error, "said nothing")
 }
+
+func TestRecordProcessor_UpdateInfos_UnknownJob(t *testing.T) {
+	mockStore := &test_utils.MockJobStore{}
+	mockStore.EXPECT().Get("gone").Return(nil, nil)
+	rp := NewRecordProcessor(nil, nil, nil, nil, mockStore, Addons{})
+
+	assert.Error(t, rp.UpdateInfos("gone", processing_common.UserInput{}))
+}
