@@ -116,9 +116,26 @@ func (s *server) Start(ctx context.Context, req *pb.ProcessRequest) (*pb.Process
 
 func (s *server) UpdateInfo(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
 	slog.Info(fmt.Sprintf("[Server] :: Updating job '%s' with params %+v", req.Id, req))
+	input, err := userInput(req)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.processor.UpdateInfos(req.Id, input); err != nil {
+		return nil, err
+	}
+	return &pb.UpdateResponse{Id: req.Id}, nil
+}
+
+// userInput converts an UpdateRequest to what the job keeps.
+//
+// The thumbnail is read through the nil-safe getters: grpc-go does not recover
+// a handler's panic, so a request without one, read field by field, took the
+// whole orchestrator down, and with it every Watch stream in flight. Velvet
+// always sends one; nothing else in the contract says it must.
+func userInput(req *pb.UpdateRequest) (processing_common.UserInput, error) {
 	// Parse video visibility from protobuff format to core format
 	if req.VidVisibility >= pb.Visibility_UNKNOWN {
-		return nil, fmt.Errorf("visibility cannot be unknown")
+		return processing_common.UserInput{}, fmt.Errorf("visibility cannot be unknown")
 	}
 	pVis := processing_common.Unlisted
 	if req.VidVisibility == pb.Visibility_PUBLIC {
@@ -142,7 +159,7 @@ func (s *server) UpdateInfo(ctx context.Context, req *pb.UpdateRequest) (*pb.Upd
 		}
 	}
 
-	err := s.processor.UpdateInfos(req.Id, processing_common.UserInput{
+	return processing_common.UserInput{
 		Summary: summary,
 		Vid: processing_common.VideoOpt{
 			Description:   req.VidDesc,
@@ -151,17 +168,13 @@ func (s *server) UpdateInfo(ctx context.Context, req *pb.UpdateRequest) (*pb.Upd
 			PlaylistId:    req.PlaylistId,
 			PlaylistTitle: req.PlaylistTitle,
 			Thumbnail: processing_common.ThumbnailOpt{
-				Title:    req.Thumbnail.Title,
-				SubTitle: req.Thumbnail.Subtitle,
-				Number:   int(req.Thumbnail.Number),
-				BgUrl:    req.Thumbnail.BgUrl,
+				Title:    req.GetThumbnail().GetTitle(),
+				SubTitle: req.GetThumbnail().GetSubtitle(),
+				Number:   int(req.GetThumbnail().GetNumber()),
+				BgUrl:    req.GetThumbnail().GetBgUrl(),
 			},
 		},
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &pb.UpdateResponse{Id: req.Id}, nil
+	}, nil
 }
 
 func main() {
