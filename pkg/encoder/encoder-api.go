@@ -25,6 +25,9 @@ type EncoderOpt struct {
 	// Default is '.mp4'
 	// The '.' MUST be supplied
 	Extension string
+	// How long the encoding service may say nothing about a job before it is
+	// asked again
+	Silence time.Duration
 }
 type EncodeJobOpt struct {
 	/** Whether to delete used assets (videoKey, audioKeys and ImageKey)

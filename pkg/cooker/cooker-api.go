@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"processing-orchestrator/internal/utils"
 	processing_common "processing-orchestrator/pkg/processing-common"
+	"time"
 )
 
 type CookingService interface {
@@ -23,6 +24,9 @@ type CookerOpt struct {
 	// Default is '.ogg'
 	// The '.' MUST be supplied
 	Extension string
+	// How long the cooking service may say nothing about a job before it is
+	// asked again
+	Silence time.Duration
 }
 
 // CookingJob Arguments that have to be passed to the cooking service

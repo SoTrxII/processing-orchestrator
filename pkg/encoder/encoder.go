@@ -8,6 +8,7 @@ import (
 	"processing-orchestrator/internal/demux"
 	"processing-orchestrator/internal/utils"
 	processing_common "processing-orchestrator/pkg/processing-common"
+	"time"
 )
 
 type Encoder struct {
@@ -31,6 +32,12 @@ func NewEncoder(pubClient utils.Publisher, pubComponent, subComponent string, pr
 		progressCh:   progressCh,
 		opt: &EncoderOpt{
 			Extension: ".mp4",
+			// encode-box takes one job at a time (prefetchCount 1), so a job
+			// queued behind another hears nothing until it starts, and an encode
+			// with the picture takes about 25 min. Asking again a job that was
+			// only queued costs a second encode of the same file : nothing is
+			// deleted (deleteAssetsFromObjStore is unexported, so never sent)
+			Silence: 30 * time.Minute,
 		},
 	}
 }
@@ -62,21 +69,30 @@ func (c *Encoder) Encode(jobId string, audioKeys []string, bgAudioKey string) (s
 	events, release := c.events.Register(jobId)
 	defer release()
 
-	err := c.pubClient.PublishEvent(context.Background(), c.pubComponent, p_Start, EncodeJob{
-		JobId:              jobId,
-		AudiosKeys:         audioKeys,
-		BackgroundAudioKey: bgAudioKey,
-		Opt:                EncodeJobOpt{deleteAssetsFromObjStore: true},
-	})
-	if err != nil {
+	publish := func() error {
+		return c.pubClient.PublishEvent(context.Background(), c.pubComponent, p_Start, EncodeJob{
+			JobId:              jobId,
+			AudiosKeys:         audioKeys,
+			BackgroundAudioKey: bgAudioKey,
+			Opt:                EncodeJobOpt{deleteAssetsFromObjStore: true},
+		})
+	}
+	if err := publish(); err != nil {
 		return "", err
 	}
 
 	// TODO : Get this from the encoder itself
 	extension := c.opt.Extension
+	silence := utils.NewSilence(c.opt.Silence)
+	defer silence.Stop()
 	for {
 		select {
+		case <-silence.C():
+			if err := silence.AskAgain("encode-box", jobId, publish); err != nil {
+				return "", err
+			}
 		case evt := <-events:
+			silence.Heard()
 			c.progressCh <- &evt
 			switch evt.State {
 			case processing_common.Done:

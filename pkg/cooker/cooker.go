@@ -8,6 +8,7 @@ import (
 	"processing-orchestrator/internal/demux"
 	"processing-orchestrator/internal/utils"
 	processing_common "processing-orchestrator/pkg/processing-common"
+	"time"
 )
 
 type Cooker struct {
@@ -31,6 +32,10 @@ func NewCooker(pubClient utils.Publisher, pubComponent, subComponent string, pro
 		progressCh:   progressCh,
 		opt: &CookerOpt{
 			Extension: ".ogg",
+			// cooking-server reports every 2s from its first byte to the end of
+			// its upload. Before that it downloads the raw files from the object
+			// store, a few seconds in the cluster
+			Silence: 10 * time.Minute,
 		},
 	}
 }
@@ -62,52 +67,50 @@ func (c *Cooker) Cook(jobId string, recordIds []string) ([]string, error) {
 	events, release := c.events.Register(jobId)
 	defer release()
 
-	err := c.pubClient.PublishEvent(context.Background(), c.pubComponent, p_Start, CookingJob{
-		JobId: jobId,
-		Ids:   recordIds,
-	})
-	if err != nil {
+	publish := func() error {
+		return c.pubClient.PublishEvent(context.Background(), c.pubComponent, p_Start, CookingJob{
+			JobId: jobId,
+			Ids:   recordIds,
+		})
+	}
+	if err := publish(); err != nil {
 		return nil, err
 	}
 
-	doneCh := make(chan error, 1)
-	defer close(doneCh)
-	var doneEvt CookingEvent
-	count := 0
+	silence := utils.NewSilence(c.opt.Silence)
+	defer silence.Stop()
+	// A set, not a count : once the job was asked again, a record can be
+	// announced done twice
+	cooked := map[string]bool{}
 	for {
 		select {
-		// All records have finished cooking
-		case err, _ := <-doneCh:
-			if err != nil {
+		case <-silence.C():
+			if err := silence.AskAgain("cooking-server", jobId, publish); err != nil {
 				return nil, err
 			}
-			ext := c.opt.Extension
-			if doneEvt.Data.Extension != "" {
-				ext = doneEvt.Data.Extension
-			}
-			var cookedKeys []string
-			for _, id := range recordIds {
-				cookedKeys = append(cookedKeys, id+ext)
-			}
-			return cookedKeys, nil
 
-		// A new event is received
-		case evt, _ := <-events:
+		case evt := <-events:
+			silence.Heard()
 			c.progressCh <- &evt
-			// That can be a done event
 			switch evt.State {
 			case processing_common.Done:
 				if has(recordIds, evt.RecordId) {
-					count++
+					cooked[evt.RecordId] = true
 				}
-				if count == len(recordIds) {
-					doneEvt = evt
-					doneCh <- nil
+				if len(cooked) == len(recordIds) {
+					ext := c.opt.Extension
+					if evt.Data.Extension != "" {
+						ext = evt.Data.Extension
+					}
+					var cookedKeys []string
+					for _, id := range recordIds {
+						cookedKeys = append(cookedKeys, id+ext)
+					}
+					return cookedKeys, nil
 				}
 			case processing_common.Error:
 				return nil, fmt.Errorf(evt.Data.Message)
 			}
-
 		}
 	}
 }

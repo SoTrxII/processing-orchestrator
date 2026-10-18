@@ -457,3 +457,19 @@ func TestRecordProcessor_ReturnPlaylist(t *testing.T) {
 	}
 	assert.NoError(t, err)
 }
+
+// Whoever watches a job has to learn that it failed, whichever step gave up
+func TestRecordProcessor_FailedJobReachesWatchers(t *testing.T) {
+	mockCooker := &test_utils.MockCookingService{}
+	mockStore := &test_utils.MockJobStore{}
+	evtCh := make(chan processing_common.Watchable, 1)
+	rp := NewRecordProcessor(mockCooker, &test_utils.MockEncodingService{}, &test_utils.MockUploadingService{}, evtCh, mockStore, Addons{})
+	mockCooker.EXPECT().Cook(mock.Anything, mock.Anything).Return(nil, fmt.Errorf("cooking-server said nothing"))
+	mockStore.EXPECT().Delete("test").Return(nil)
+
+	rp.startJob(&job_store.JobState{Id: "test", Step: processing_common.StepCooking, RawAudioKeys: []string{"raw"}})
+
+	pg := (<-evtCh).ToProgress()
+	assert.Equal(t, "test", pg.JobId)
+	assert.ErrorContains(t, pg.Error, "said nothing")
+}

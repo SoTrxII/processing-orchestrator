@@ -56,6 +56,19 @@ type DoneData struct {
 	CreatedPlaylistLink string `json:"createdPlaylistLink"`
 }
 
+// FailedEvent ends a job that failed, whichever step failed it. A worker's
+// own error already reaches the watchers, but a job given up for silence
+// would otherwise leave them waiting
+type FailedEvent struct {
+	JobId string
+	Step  Step
+	Err   error
+}
+
+func (e *FailedEvent) ToProgress() *ServiceProgress {
+	return &ServiceProgress{JobId: e.JobId, Step: e.Step, Error: e.Err}
+}
+
 type DoneEvent struct {
 	ServiceEvent
 	Data DoneData `json:"data"`

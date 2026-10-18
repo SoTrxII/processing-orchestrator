@@ -162,3 +162,14 @@ func waitUntilWaiting(t *testing.T, encoder *Encoder, jobId string) {
 		return encoder.events.IsWaiting(jobId)
 	}, 5*time.Second, 10*time.Millisecond)
 }
+
+func TestEncoder_GivesUpOnASilentWorker(t *testing.T) {
+	pub := test_utils.MockPublisher{}
+	pub.On("PublishEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	encoder := NewEncoder(&pub, "test", "test", make(chan processing_common.Watchable, 100))
+	encoder.opt.Silence = 10 * time.Millisecond
+
+	_, err := encoder.Encode("1", []string{"1"}, "")
+	assert.ErrorContains(t, err, "said nothing")
+	pub.AssertNumberOfCalls(t, "PublishEvent", 3)
+}

@@ -52,6 +52,7 @@ func (rp *RecordProcessor) startJob(job *job_store.JobState) {
 	err := rp.Process(job)
 	if err != nil {
 		slog.Error(fmt.Sprintf("[RecordProcessor] :: while processing job %s : %s", job.Id, err.Error()))
+		rp.progressCh <- &processing_common.FailedEvent{JobId: job.Id, Step: job.Step, Err: err}
 		err = rp.store.Delete(job.Id)
 		if err != nil {
 			slog.Warn(fmt.Sprintf("[RecordProcessor] :: while deleting job %s : %s", job.Id, err.Error()))

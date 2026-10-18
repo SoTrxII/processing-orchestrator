@@ -242,3 +242,55 @@ func getProgressEvt(jobId, recId string, totalBytes int64) []byte {
 	}
 	return rawEvt
 }
+
+// A worker restarted mid-job loses its message for good, and says nothing
+// more about the job : it has to be asked again, and its answer then counts
+func TestCooker_AsksAgainASilentWorker(t *testing.T) {
+	published := make(chan bool, 10)
+	pub := test_utils.MockPublisher{}
+	pub.On("PublishEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Run(func(mock.Arguments) { published <- true }).
+		Return(nil)
+	cooker := NewCooker(&pub, "test", "test", make(chan processing_common.Watchable, 100))
+	cooker.opt.Silence = 200 * time.Millisecond
+	done := make(chan []string, 1)
+
+	go func() {
+		cookedKeys, err := cooker.Cook("1", []string{"1", "2"})
+		assert.NoError(t, err)
+		done <- cookedKeys
+	}()
+	<-published
+	waitUntilWaiting(t, cooker, "1")
+	_, _ = cooker.onInfo(nil, &common.TopicEvent{RawData: getDoneEvt("1", "1", "")})
+
+	// Silent for longer than allowed : the job is published again
+	<-published
+	// The worker cooks both again : the first one announced twice must not
+	// stand for the second
+	_, _ = cooker.onInfo(nil, &common.TopicEvent{RawData: getDoneEvt("1", "1", "")})
+	select {
+	case <-done:
+		t.Fatal("Cooking stopped while a record was still cooking")
+	case <-time.After(20 * time.Millisecond):
+	}
+	_, _ = cooker.onInfo(nil, &common.TopicEvent{RawData: getDoneEvt("1", "2", "")})
+
+	select {
+	case cookedKeys := <-done:
+		assert.Equal(t, []string{"1.ogg", "2.ogg"}, cookedKeys)
+	case <-time.After(5 * time.Second):
+		t.Fatal("Cooking never finished")
+	}
+}
+
+func TestCooker_GivesUpOnASilentWorker(t *testing.T) {
+	pub := test_utils.MockPublisher{}
+	pub.On("PublishEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	cooker := NewCooker(&pub, "test", "test", make(chan processing_common.Watchable, 100))
+	cooker.opt.Silence = 10 * time.Millisecond
+
+	_, err := cooker.Cook("1", []string{"1"})
+	assert.ErrorContains(t, err, "said nothing")
+	pub.AssertNumberOfCalls(t, "PublishEvent", 3)
+}
