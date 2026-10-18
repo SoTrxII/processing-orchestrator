@@ -54,6 +54,18 @@ func (s *server) Watch(req *pb.WatchRequest, stream pb.Processor_WatchServer) er
 	defer close(com.Done)
 	s.progressRep.Register(req.Id, com)
 
+	// Events only reach whoever is registered when they happen. A client
+	// watching again, Velvet after a restart, would otherwise wait forever on
+	// a job that ended while nobody was looking. Registered first, so that a
+	// job ending in between is at worst reported twice
+	job, err := s.processor.Job(req.Id)
+	if err != nil {
+		return err
+	}
+	if settled := settledStatus(req.Id, job, s.progressRep); settled != nil {
+		return stream.Send(settled)
+	}
+
 	for {
 		progress := <-com.Data
 		if err := stream.Send(progress); err != nil {
@@ -64,12 +76,32 @@ func (s *server) Watch(req *pb.WatchRequest, stream pb.Processor_WatchServer) er
 			log.Printf("Error sending status: %v", err)
 			return err
 		}
-		// Server will close the stream
-		if progress.Done {
+		// Server will close the stream. The reporter forgets a failed job's
+		// watchers, so nothing would ever come after an error either
+		if progress.Done || progress.Error != "" {
 			break
 		}
 	}
 	return nil
+}
+
+// settledStatus is the last word on a job that is over, nil while it runs. A
+// failed job is deleted from the store, and Init reloads the store before the
+// server starts listening : a job the store doesn't know is one that failed
+func settledStatus(jobId string, job *job_store.JobState, rep *progress_reporter.ProgressReporter) *pb.ProcessingStatus {
+	if job == nil {
+		return &pb.ProcessingStatus{Id: jobId, Error: "unknown job : it failed, or was never submitted"}
+	}
+	if job.Step != processing_common.StepDone {
+		return nil
+	}
+	return rep.StatusOf(&processing_common.ServiceProgress{
+		JobId:               jobId,
+		Step:                processing_common.StepDone,
+		Progress:            "Done",
+		Link:                job.VideoLink,
+		CreatedPlaylistLink: job.CreatedPlaylistLink,
+	})
 }
 
 func (s *server) Start(ctx context.Context, req *pb.ProcessRequest) (*pb.ProcessResponse, error) {

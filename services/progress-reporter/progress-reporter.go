@@ -95,6 +95,11 @@ func (pr *ProgressReporter) AddInfo(jobId string, audiosKeys []string) {
 	pr.jobInfos[jobId] = audiosKeys
 }
 
+// StatusOf is what a watcher is sent for this progress
+func (pr *ProgressReporter) StatusOf(pg *processing_common.ServiceProgress) *pb.ProcessingStatus {
+	return pr.toStatus(pg)
+}
+
 func (pr *ProgressReporter) toStatus(pg *processing_common.ServiceProgress) *pb.ProcessingStatus {
 
 	pb := pb.ProcessingStatus{

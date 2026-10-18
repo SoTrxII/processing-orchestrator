@@ -137,6 +137,11 @@ func (rp *RecordProcessor) Process(job *job_store.JobState) error {
 	return nil
 }
 
+// Job is the stored state of a job, nil if there is none
+func (rp *RecordProcessor) Job(jobId string) (*job_store.JobState, error) {
+	return rp.store.Get(jobId)
+}
+
 func (rp *RecordProcessor) UpdateInfos(jobId string, userInput processing_common.UserInput) error {
 	job, err := rp.store.Get(jobId)
 	if err != nil {
