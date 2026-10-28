@@ -1,6 +1,10 @@
 package summarizer
 
-import processing_common "processing-orchestrator/pkg/processing-common"
+import (
+	"context"
+
+	processing_common "processing-orchestrator/pkg/processing-common"
+)
 
 // SummarizingService hands a finished recording over to be summarized.
 //
@@ -11,7 +15,7 @@ import processing_common "processing-orchestrator/pkg/processing-common"
 type SummarizingService interface {
 	// Submit asks for a recording to be summarized. Returning nil means the
 	// request was accepted, not that the summary is ready.
-	Submit(req *SummaryJob) error
+	Submit(ctx context.Context, req *SummaryJob) error
 }
 
 // SummaryJob is what the summarizer is given. The field names are the wire

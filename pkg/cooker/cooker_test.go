@@ -1,6 +1,7 @@
 package cooker
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/dapr/go-sdk/service/common"
 	"github.com/stretchr/testify/assert"
@@ -31,7 +32,7 @@ func TestCooker_Start_OneRecord_CustomExt(t *testing.T) {
 
 	// Cook cooking
 	go func() {
-		audioKey, err := cooker.Cook("1", []string{"1"})
+		audioKey, err := cooker.Cook(context.Background(), "1", []string{"1"})
 		assert.NoError(t, err)
 		assert.Equal(t, []string{"1.test"}, audioKey)
 		done <- true
@@ -61,7 +62,7 @@ func TestCooker_Start_MultipleRecords_CustomExt(t *testing.T) {
 
 	// Cook cooking
 	go func() {
-		audioKey, err := cooker.Cook("1", []string{"1", "2"})
+		audioKey, err := cooker.Cook(context.Background(), "1", []string{"1", "2"})
 		assert.NoError(t, err)
 		assert.Equal(t, []string{"1.ogg", "2.ogg"}, audioKey)
 		done <- true
@@ -104,7 +105,7 @@ func TestCooker_Start_ErrorDuringCooking(t *testing.T) {
 
 	// Cook cooking
 	go func() {
-		_, err := cooker.Cook("1", []string{"1", "2"})
+		_, err := cooker.Cook(context.Background(), "1", []string{"1", "2"})
 		assert.Error(t, err)
 		done <- true
 	}()
@@ -176,12 +177,12 @@ func TestCooker_Start_ConcurrentJobs(t *testing.T) {
 	second := make(chan []string, 1)
 
 	go func() {
-		cookedKeys, err := cooker.Cook("job-1", []string{"1"})
+		cookedKeys, err := cooker.Cook(context.Background(), "job-1", []string{"1"})
 		assert.NoError(t, err)
 		first <- cookedKeys
 	}()
 	go func() {
-		cookedKeys, err := cooker.Cook("job-2", []string{"2"})
+		cookedKeys, err := cooker.Cook(context.Background(), "job-2", []string{"2"})
 		assert.NoError(t, err)
 		second <- cookedKeys
 	}()
@@ -256,7 +257,7 @@ func TestCooker_AsksAgainASilentWorker(t *testing.T) {
 	done := make(chan []string, 1)
 
 	go func() {
-		cookedKeys, err := cooker.Cook("1", []string{"1", "2"})
+		cookedKeys, err := cooker.Cook(context.Background(), "1", []string{"1", "2"})
 		assert.NoError(t, err)
 		done <- cookedKeys
 	}()
@@ -290,7 +291,7 @@ func TestCooker_GivesUpOnASilentWorker(t *testing.T) {
 	cooker := NewCooker(&pub, "test", "test", make(chan processing_common.Watchable, 100))
 	cooker.opt.Silence = 10 * time.Millisecond
 
-	_, err := cooker.Cook("1", []string{"1"})
+	_, err := cooker.Cook(context.Background(), "1", []string{"1"})
 	assert.ErrorContains(t, err, "said nothing")
 	pub.AssertNumberOfCalls(t, "PublishEvent", 3)
 }

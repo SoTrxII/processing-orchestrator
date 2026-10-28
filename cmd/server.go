@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"processing-orchestrator/internal/utils"
 	"processing-orchestrator/pkg/cooker"
 	"processing-orchestrator/pkg/encoder"
 	job_store "processing-orchestrator/pkg/job-store"
@@ -105,7 +106,7 @@ func settledStatus(jobId string, job *job_store.JobState, rep *progress_reporter
 }
 
 func (s *server) Start(ctx context.Context, req *pb.ProcessRequest) (*pb.ProcessResponse, error) {
-	jobId, err := s.processor.Add(req.DiscordAudioKeys, req.BackgroundAudioKey)
+	jobId, err := s.processor.Add(req.DiscordAudioKeys, req.BackgroundAudioKey, utils.Traceparent(ctx))
 	if err != nil {
 		return nil, err
 	}

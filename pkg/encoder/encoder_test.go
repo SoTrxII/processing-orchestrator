@@ -1,6 +1,7 @@
 package encoder
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/dapr/go-sdk/service/common"
 	"github.com/stretchr/testify/assert"
@@ -27,7 +28,7 @@ func TestEncoder_Start(t *testing.T) {
 
 	// Cook encoding
 	go func() {
-		audioKey, err := encoder.Encode("1", []string{"1"}, "")
+		audioKey, err := encoder.Encode(context.Background(), "1", []string{"1"}, "")
 		assert.NoError(t, err)
 		assert.Equal(t, "1.mp4", audioKey)
 		done <- true
@@ -58,7 +59,7 @@ func TestEncoder_ErrorDuringEncoding(t *testing.T) {
 
 	// Cook encoding
 	go func() {
-		videoKey, err := encoder.Encode("1", []string{"1"}, "")
+		videoKey, err := encoder.Encode(context.Background(), "1", []string{"1"}, "")
 		assert.Error(t, err)
 		assert.Empty(t, videoKey)
 		done <- true
@@ -169,7 +170,7 @@ func TestEncoder_GivesUpOnASilentWorker(t *testing.T) {
 	encoder := NewEncoder(&pub, "test", "test", make(chan processing_common.Watchable, 100))
 	encoder.opt.Silence = 10 * time.Millisecond
 
-	_, err := encoder.Encode("1", []string{"1"}, "")
+	_, err := encoder.Encode(context.Background(), "1", []string{"1"}, "")
 	assert.ErrorContains(t, err, "said nothing")
 	pub.AssertNumberOfCalls(t, "PublishEvent", 3)
 }

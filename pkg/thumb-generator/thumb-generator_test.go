@@ -17,9 +17,9 @@ func (silentClient) CreateThumbnail(ctx context.Context, _ *pb.ThumbnailRequest,
 }
 
 func TestGenerateThumbnail_ASilentGeneratorTimesOut(t *testing.T) {
-	gen := &ThumbGenerator{client: silentClient{}, ctx: context.Background(), timeout: 10 * time.Millisecond}
+	gen := &ThumbGenerator{client: silentClient{}, timeout: 10 * time.Millisecond}
 	done := make(chan error, 1)
-	go func() { _, err := gen.GenerateThumbnail(&pb.ThumbnailRequest{}); done <- err }()
+	go func() { _, err := gen.GenerateThumbnail(context.Background(), &pb.ThumbnailRequest{}); done <- err }()
 	select {
 	case err := <-done:
 		if err == nil {

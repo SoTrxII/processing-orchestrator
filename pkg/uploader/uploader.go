@@ -70,16 +70,16 @@ Loop:
 	}
 }
 
-func (u *Uploader) Upload(jobId, storageKey string, opt *processing_common.VideoOpt) (*Video, error) {
+func (u *Uploader) Upload(ctx context.Context, jobId, storageKey string, opt *processing_common.VideoOpt) (*Video, error) {
 	// Claim the events of this job before asking for the work to be done, so
 	// that none of them can be missed
 	events, release := u.events.Register(jobId)
 	defer release()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	evtCtx, cancel := context.WithCancel(context.Background())
 	// So even if an error happen, the goroutine will be cleaned up
 	defer cancel()
-	go u.handleEvents(ctx, events)
+	go u.handleEvents(evtCtx, events)
 
 	uploadJob := UploadJob{
 		VideoOpt:   *opt,
@@ -90,7 +90,7 @@ func (u *Uploader) Upload(jobId, storageKey string, opt *processing_common.Video
 	if err != nil {
 		return nil, err
 	}
-	res, err := u.invoker.InvokeMethodWithContent(context.Background(), u.invokeComponent, "v1/videos", "POST", &utils.DataContent{
+	res, err := u.invoker.InvokeMethodWithContent(ctx, u.invokeComponent, "v1/videos", "POST", &utils.DataContent{
 		ContentType: "application/json",
 		Data:        bytes,
 	})
@@ -105,9 +105,9 @@ func (u *Uploader) Upload(jobId, storageKey string, opt *processing_common.Video
 	return &video, nil
 }
 
-func (u *Uploader) CreatePlaylist(opt *processing_common.VideoOpt) (*Playlist, error) {
+func (u *Uploader) CreatePlaylist(ctx context.Context, opt *processing_common.VideoOpt) (*Playlist, error) {
 	bytes, err := json.Marshal(opt)
-	res, err := u.invoker.InvokeMethodWithContent(context.Background(), u.invokeComponent, "v1/playlists", "POST", &utils.DataContent{
+	res, err := u.invoker.InvokeMethodWithContent(ctx, u.invokeComponent, "v1/playlists", "POST", &utils.DataContent{
 		ContentType: "application/json",
 		Data:        bytes,
 	})
@@ -122,12 +122,12 @@ func (u *Uploader) CreatePlaylist(opt *processing_common.VideoOpt) (*Playlist, e
 	return &playlist, nil
 }
 
-func (u *Uploader) AddToPlaylist(vidId, playlistId string) error {
-	_, err := u.invoker.InvokeMethod(context.Background(), u.invokeComponent, fmt.Sprintf("v1/playlists/%s/videos/%s", playlistId, vidId), "PUT")
+func (u *Uploader) AddToPlaylist(ctx context.Context, vidId, playlistId string) error {
+	_, err := u.invoker.InvokeMethod(ctx, u.invokeComponent, fmt.Sprintf("v1/playlists/%s/videos/%s", playlistId, vidId), "PUT")
 	return err
 }
 
-func (u *Uploader) SetThumbnail(vidId, thumbKey string) error {
-	_, err := u.invoker.InvokeMethod(context.Background(), u.invokeComponent, fmt.Sprintf("v1/videos/%s/thumbnail/%s", vidId, thumbKey), "POST")
+func (u *Uploader) SetThumbnail(ctx context.Context, vidId, thumbKey string) error {
+	_, err := u.invoker.InvokeMethod(ctx, u.invokeComponent, fmt.Sprintf("v1/videos/%s/thumbnail/%s", vidId, thumbKey), "POST")
 	return err
 }

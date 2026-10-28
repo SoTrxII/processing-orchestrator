@@ -1,8 +1,12 @@
 package thumb_generator
 
-import pb "processing-orchestrator/pkg/thumb-generator/proto"
+import (
+	"context"
+
+	pb "processing-orchestrator/pkg/thumb-generator/proto"
+)
 
 type ThumbnailRequest = pb.ThumbnailRequest
 type ThumbGenService interface {
-	GenerateThumbnail(req *ThumbnailRequest) (string, error)
+	GenerateThumbnail(ctx context.Context, req *ThumbnailRequest) (string, error)
 }

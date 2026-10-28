@@ -1,6 +1,7 @@
 package uploader
 
 import (
+	"context"
 	"fmt"
 	"processing-orchestrator/internal/utils"
 	processing_common "processing-orchestrator/pkg/processing-common"
@@ -9,10 +10,10 @@ import (
 )
 
 type UploadingService interface {
-	Upload(jobId, storageKey string, opt *processing_common.VideoOpt) (*Video, error)
-	AddToPlaylist(vidId, playlistId string) error
-	SetThumbnail(vidId, thumbKey string) error
-	CreatePlaylist(opt *processing_common.VideoOpt) (*Playlist, error)
+	Upload(ctx context.Context, jobId, storageKey string, opt *processing_common.VideoOpt) (*Video, error)
+	AddToPlaylist(ctx context.Context, vidId, playlistId string) error
+	SetThumbnail(ctx context.Context, vidId, thumbKey string) error
+	CreatePlaylist(ctx context.Context, opt *processing_common.VideoOpt) (*Playlist, error)
 }
 
 const (

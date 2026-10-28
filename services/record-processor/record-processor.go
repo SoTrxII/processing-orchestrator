@@ -1,9 +1,11 @@
 package record_processor
 
 import (
+	"context"
 	"fmt"
 	"github.com/google/uuid"
 	"log/slog"
+	"processing-orchestrator/internal/utils"
 	"processing-orchestrator/pkg/cooker"
 	"processing-orchestrator/pkg/encoder"
 	job_store "processing-orchestrator/pkg/job-store"
@@ -61,7 +63,8 @@ func (rp *RecordProcessor) startJob(job *job_store.JobState) {
 	}
 }
 
-func (rp *RecordProcessor) Add(audioKeys []string, backgroundAudioKey string) (string, error) {
+// Add starts a job in the trace of the call that asked for it (utils.Traceparent)
+func (rp *RecordProcessor) Add(audioKeys []string, backgroundAudioKey, traceParent string) (string, error) {
 
 	jobId := uuid.New().String()
 	job := &job_store.JobState{
@@ -69,6 +72,7 @@ func (rp *RecordProcessor) Add(audioKeys []string, backgroundAudioKey string) (s
 		Step:               processing_common.StepCooking,
 		RawAudioKeys:       audioKeys,
 		BackgroundAudioKey: backgroundAudioKey,
+		TraceParent:        traceParent,
 		UserInput: processing_common.UserInput{Vid: processing_common.VideoOpt{
 			Description: "",
 			Title:       jobId,
@@ -87,10 +91,11 @@ func (rp *RecordProcessor) Add(audioKeys []string, backgroundAudioKey string) (s
 }
 
 func (rp *RecordProcessor) Process(job *job_store.JobState) error {
+	ctx := utils.TraceContext(job.TraceParent)
 	// Cook
 	if job.Step == processing_common.StepCooking {
 		slog.Info(fmt.Sprintf("[RecordProcessor] :: Cooking job %s", job.Id))
-		err := rp.cook(job)
+		err := rp.cook(ctx, job)
 		if err != nil {
 			return err
 		}
@@ -100,7 +105,7 @@ func (rp *RecordProcessor) Process(job *job_store.JobState) error {
 	// Encode
 	if job.Step == processing_common.StepEncoding {
 		slog.Info(fmt.Sprintf("[RecordProcessor] :: Encoding job %s", job.Id))
-		err := rp.encode(job)
+		err := rp.encode(ctx, job)
 		if err != nil {
 			return err
 		}
@@ -110,7 +115,7 @@ func (rp *RecordProcessor) Process(job *job_store.JobState) error {
 	// Upload
 	if job.Step == processing_common.StepUploading {
 		slog.Info(fmt.Sprintf("[RecordProcessor] :: Uploading job %s", job.Id))
-		err := rp.upload(job)
+		err := rp.upload(ctx, job)
 		if err != nil {
 			return err
 		}
@@ -162,8 +167,8 @@ func (rp *RecordProcessor) UpdateInfos(jobId string, userInput processing_common
 	return nil
 }
 
-func (rp *RecordProcessor) cook(job *job_store.JobState) error {
-	cookedKeys, err := rp.cooker.Cook(job.Id, job.RawAudioKeys)
+func (rp *RecordProcessor) cook(ctx context.Context, job *job_store.JobState) error {
+	cookedKeys, err := rp.cooker.Cook(ctx, job.Id, job.RawAudioKeys)
 	if err != nil {
 		return err
 	}
@@ -177,14 +182,14 @@ func (rp *RecordProcessor) cook(job *job_store.JobState) error {
 	// The audio is usable from here on, and transcribing it takes the better
 	// part of a day : starting now buys the whole of encoding and uploading
 	// as a head start. Nothing downstream waits for it.
-	rp.summarize(job)
+	rp.summarize(ctx, job)
 	return nil
 }
 
 // summarize hands the cooked recording to the summarizer, if there is one and
 // the caller asked for it. Failures are logged and swallowed : the video is
 // what the user is waiting for, and losing a summary must not lose that too.
-func (rp *RecordProcessor) summarize(job *job_store.JobState) {
+func (rp *RecordProcessor) summarize(ctx context.Context, job *job_store.JobState) {
 	if rp.addons.Summarizer == nil {
 		return
 	}
@@ -199,7 +204,7 @@ func (rp *RecordProcessor) summarize(job *job_store.JobState) {
 	}
 
 	slog.Info(fmt.Sprintf("[RecordProcessor] :: Submitting job %s for summary (campaign %d, episode %d)", job.Id, opt.CampaignId, opt.EpisodeId))
-	err := rp.addons.Summarizer.Submit(&summarizer.SummaryJob{
+	err := rp.addons.Summarizer.Submit(ctx, &summarizer.SummaryJob{
 		JobId:         job.Id,
 		CampaignId:    opt.CampaignId,
 		EpisodeId:     opt.EpisodeId,
@@ -213,8 +218,8 @@ func (rp *RecordProcessor) summarize(job *job_store.JobState) {
 	}
 }
 
-func (rp *RecordProcessor) encode(job *job_store.JobState) error {
-	videoKey, err := rp.encoder.Encode(job.Id, job.CookedAudioKeys, job.BackgroundAudioKey)
+func (rp *RecordProcessor) encode(ctx context.Context, job *job_store.JobState) error {
+	videoKey, err := rp.encoder.Encode(ctx, job.Id, job.CookedAudioKeys, job.BackgroundAudioKey)
 	if err != nil {
 		return err
 	}
@@ -227,7 +232,7 @@ func (rp *RecordProcessor) encode(job *job_store.JobState) error {
 	return nil
 }
 
-func (rp *RecordProcessor) upload(job *job_store.JobState) error {
+func (rp *RecordProcessor) upload(ctx context.Context, job *job_store.JobState) error {
 	// Multiple things to do here
 	// 1. Upload the video
 	// 2. Add it to a playlist, if no playlist is provided, create one
@@ -240,14 +245,14 @@ func (rp *RecordProcessor) upload(job *job_store.JobState) error {
 	// If no generator is provided, we skip this step and send an empty string to the channel to unblock it
 	thumbChan := make(chan string, 1)
 	if rp.addons.ThumbGen != nil {
-		go rp.generateThumbnail(job, thumbChan)
+		go rp.generateThumbnail(ctx, job, thumbChan)
 	} else {
 		slog.Info(fmt.Sprintf("[RecordProcessor] :: Skipping thumbnail generation for job %s, no generator supplied", job.Id))
 		thumbChan <- ""
 	}
 
 	// During the thumbnail generation, we can upload the video
-	vid, err := rp.uploader.Upload(job.Id, job.VideoKey, &job.UserInput.Vid)
+	vid, err := rp.uploader.Upload(ctx, job.Id, job.VideoKey, &job.UserInput.Vid)
 	if err != nil {
 		return err
 	}
@@ -255,7 +260,7 @@ func (rp *RecordProcessor) upload(job *job_store.JobState) error {
 	// and add it to a playlist
 	// If it fails, we just log it
 	slog.Info(fmt.Sprintf("[RecordProcessor] :: job %s :: Adding video to playlist %s", job.Id, job.UserInput.Vid.PlaylistId))
-	playlist, pErr := rp.addVidToPlaylist(job.Id, vid.Id, &job.UserInput.Vid)
+	playlist, pErr := rp.addVidToPlaylist(ctx, job.Id, vid.Id, &job.UserInput.Vid)
 	if pErr != nil {
 		slog.Warn(fmt.Sprintf("[RecordProcessor] :: while adding video to playlist for job %s : %s", job.Id, pErr.Error()))
 	} else {
@@ -267,7 +272,7 @@ func (rp *RecordProcessor) upload(job *job_store.JobState) error {
 	thumbKey := <-thumbChan
 	slog.Info(fmt.Sprintf("[RecordProcessor] :: Thumbnail key for job %s : %s", job.Id, thumbKey))
 	if thumbKey != "" {
-		tErr := rp.uploader.SetThumbnail(vid.Id, thumbKey)
+		tErr := rp.uploader.SetThumbnail(ctx, vid.Id, thumbKey)
 		if tErr != nil {
 			slog.Warn(fmt.Sprintf("[RecordProcessor] :: while setting thumbnail for job %s : %s", job.Id, tErr.Error()))
 		} else {
@@ -293,12 +298,12 @@ func (rp *RecordProcessor) upload(job *job_store.JobState) error {
 // The opt argument is modified to contain the playlist id if it was created
 // Return an error if the video could not be added to the playlist
 // Return the playlist if it was created, nil otherwise
-func (rp *RecordProcessor) addVidToPlaylist(jobId, vidId string, opt *processing_common.VideoOpt) (*uploader.Playlist, error) {
+func (rp *RecordProcessor) addVidToPlaylist(ctx context.Context, jobId, vidId string, opt *processing_common.VideoOpt) (*uploader.Playlist, error) {
 	var playlist *uploader.Playlist
 	var err error
 	if opt.PlaylistId == "" {
 		slog.Info(fmt.Sprintf("[RecordProcessor] :: job %s :: No playlist provided, creating playlist", jobId))
-		playlist, err = rp.uploader.CreatePlaylist(&processing_common.VideoOpt{
+		playlist, err = rp.uploader.CreatePlaylist(ctx, &processing_common.VideoOpt{
 			Description: opt.Description,
 			Title:       opt.PlaylistTitle,
 			Visibility:  opt.Visibility,
@@ -310,14 +315,14 @@ func (rp *RecordProcessor) addVidToPlaylist(jobId, vidId string, opt *processing
 		slog.Info(fmt.Sprintf("[RecordProcessor] :: job %s :: Playlist created with id %s", jobId, opt.PlaylistId))
 	}
 	slog.Info(fmt.Sprintf("[RecordProcessor] :: job %s :: Adding video to playlist %s", jobId, opt.PlaylistId))
-	err = rp.uploader.AddToPlaylist(vidId, opt.PlaylistId)
+	err = rp.uploader.AddToPlaylist(ctx, vidId, opt.PlaylistId)
 	return playlist, err
 }
 
 // generateThumbnail Generate a thumbnail for a job. Return the key of the thumbnail or an empty string if the generation failed
-func (rp *RecordProcessor) generateThumbnail(job *job_store.JobState, resChan chan string) {
+func (rp *RecordProcessor) generateThumbnail(ctx context.Context, job *job_store.JobState, resChan chan string) {
 	slog.Info(fmt.Sprintf("[RecordProcessor] :: Generating thumbnail for job %s", job.Id))
-	key, err := rp.addons.ThumbGen.GenerateThumbnail(&thumb_generator.ThumbnailRequest{
+	key, err := rp.addons.ThumbGen.GenerateThumbnail(ctx, &thumb_generator.ThumbnailRequest{
 		// Todo :: Send this
 		GmsAvatarUrl:  nil,
 		Title:         job.UserInput.Vid.Thumbnail.Title,

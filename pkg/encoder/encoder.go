@@ -63,14 +63,14 @@ func (c *Encoder) onInfo(ctx context.Context, e *common.TopicEvent) (retry bool,
 	return false, nil
 }
 
-func (c *Encoder) Encode(jobId string, audioKeys []string, bgAudioKey string) (string, error) {
+func (c *Encoder) Encode(ctx context.Context, jobId string, audioKeys []string, bgAudioKey string) (string, error) {
 	// Claim the events of this job before asking for the work to be done, so
 	// that none of them can be missed
 	events, release := c.events.Register(jobId)
 	defer release()
 
 	publish := func() error {
-		return c.pubClient.PublishEvent(context.Background(), c.pubComponent, p_Start, EncodeJob{
+		return c.pubClient.PublishEvent(ctx, c.pubComponent, p_Start, EncodeJob{
 			JobId:              jobId,
 			AudiosKeys:         audioKeys,
 			BackgroundAudioKey: bgAudioKey,

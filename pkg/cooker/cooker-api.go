@@ -1,6 +1,7 @@
 package cooker
 
 import (
+	"context"
 	"fmt"
 	"processing-orchestrator/internal/utils"
 	processing_common "processing-orchestrator/pkg/processing-common"
@@ -8,7 +9,7 @@ import (
 )
 
 type CookingService interface {
-	Cook(jobId string, recordIds []string) ([]string, error)
+	Cook(ctx context.Context, jobId string, recordIds []string) ([]string, error)
 }
 
 const (

@@ -19,7 +19,7 @@ const generationTimeout = 2 * time.Minute
 
 type ThumbGenerator struct {
 	client          pb.ThumbnailClient
-	ctx             context.Context
+	appId           string
 	invokeComponent string
 	timeout         time.Duration
 }
@@ -31,18 +31,16 @@ func NewThumbGenerator(daprAddress, appId string) *ThumbGenerator {
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
-	methodCtx := metadata.AppendToOutgoingContext(context.Background(), "dapr-app-id", appId)
-	methodCtx = metadata.AppendToOutgoingContext(methodCtx, "dapr-stream", "true")
-
 	return &ThumbGenerator{
 		client:  pb.NewThumbnailClient(conn),
-		ctx:     methodCtx,
+		appId:   appId,
 		timeout: generationTimeout,
 	}
 }
 
-func (t *ThumbGenerator) GenerateThumbnail(req *pb.ThumbnailRequest) (string, error) {
-	ctx, cancel := context.WithTimeout(t.ctx, t.timeout)
+func (t *ThumbGenerator) GenerateThumbnail(ctx context.Context, req *pb.ThumbnailRequest) (string, error) {
+	ctx = metadata.AppendToOutgoingContext(ctx, "dapr-app-id", t.appId, "dapr-stream", "true")
+	ctx, cancel := context.WithTimeout(ctx, t.timeout)
 	defer cancel()
 	res, err := t.client.CreateThumbnail(ctx, req)
 	if err != nil {

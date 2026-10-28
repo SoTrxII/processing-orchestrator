@@ -27,13 +27,13 @@ func NewSummarizer(client utils.Invoker, appId string) *Summarizer {
 	return &Summarizer{client: client, appId: appId}
 }
 
-func (s *Summarizer) Submit(req *SummaryJob) error {
+func (s *Summarizer) Submit(ctx context.Context, req *SummaryJob) error {
 	payload, err := json.Marshal(req)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), submitTimeout)
+	ctx, cancel := context.WithTimeout(ctx, submitTimeout)
 	defer cancel()
 
 	_, err = s.client.InvokeMethodWithContent(ctx, s.appId, startMethod, "POST", &utils.DataContent{

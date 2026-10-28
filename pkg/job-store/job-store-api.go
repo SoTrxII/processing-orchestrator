@@ -27,4 +27,7 @@ type JobState struct {
 	VideoLink string
 	// Link to the created playlist if any
 	CreatedPlaylistLink string
+	// W3C trace context of the call that started the job, carried by every
+	// call made for it (utils.TraceContext). Empty for jobs stored before
+	TraceParent string
 }

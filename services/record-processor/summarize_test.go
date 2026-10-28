@@ -1,6 +1,7 @@
 package record_processor
 
 import (
+	"context"
 	"fmt"
 	job_store "processing-orchestrator/pkg/job-store"
 	processing_common "processing-orchestrator/pkg/processing-common"
@@ -27,11 +28,11 @@ func cookOnly(t *testing.T, addons Addons, cooked []string, job *job_store.JobSt
 	t.Helper()
 	mockCooker := &test_utils.MockCookingService{}
 	mockStore := &test_utils.MockJobStore{}
-	mockCooker.EXPECT().Cook(mock.Anything, mock.Anything).Return(cooked, nil)
+	mockCooker.EXPECT().Cook(mock.Anything, mock.Anything, mock.Anything).Return(cooked, nil)
 	mockStore.EXPECT().Upsert(mock.Anything).Return(nil)
 
 	rp := NewRecordProcessor(mockCooker, nil, nil, make(chan processing_common.Watchable, 1), mockStore, addons)
-	return rp.cook(job)
+	return rp.cook(context.Background(), job)
 }
 
 // The summary is submitted as soon as the audio exists, not at the end of the
@@ -39,8 +40,8 @@ func cookOnly(t *testing.T, addons Addons, cooked []string, job *job_store.JobSt
 func TestSummaryIsSubmittedOnceCookingIsDone(t *testing.T) {
 	mockSummarizer := test_utils.NewMockSummarizingService(t)
 	var got *summarizer.SummaryJob
-	mockSummarizer.EXPECT().Submit(mock.Anything).
-		Run(func(req *summarizer.SummaryJob) { got = req }).
+	mockSummarizer.EXPECT().Submit(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, req *summarizer.SummaryJob) { got = req }).
 		Return(nil)
 
 	job := cookedJob(&processing_common.SummaryOpt{CampaignId: 28, EpisodeId: 11, IsOneShot: false})
@@ -61,8 +62,8 @@ func TestSummaryIsSubmittedOnceCookingIsDone(t *testing.T) {
 func TestEveryCookedChunkIsSubmitted(t *testing.T) {
 	mockSummarizer := test_utils.NewMockSummarizingService(t)
 	var got *summarizer.SummaryJob
-	mockSummarizer.EXPECT().Submit(mock.Anything).
-		Run(func(req *summarizer.SummaryJob) { got = req }).
+	mockSummarizer.EXPECT().Submit(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, req *summarizer.SummaryJob) { got = req }).
 		Return(nil)
 
 	job := cookedJob(&processing_common.SummaryOpt{CampaignId: 28, EpisodeId: 12})
@@ -75,8 +76,8 @@ func TestEveryCookedChunkIsSubmitted(t *testing.T) {
 func TestOneShotIsFlagged(t *testing.T) {
 	mockSummarizer := test_utils.NewMockSummarizingService(t)
 	var got *summarizer.SummaryJob
-	mockSummarizer.EXPECT().Submit(mock.Anything).
-		Run(func(req *summarizer.SummaryJob) { got = req }).
+	mockSummarizer.EXPECT().Submit(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, req *summarizer.SummaryJob) { got = req }).
 		Return(nil)
 
 	job := cookedJob(&processing_common.SummaryOpt{CampaignId: 3, EpisodeId: 1, IsOneShot: true})
@@ -108,7 +109,7 @@ func TestNoSummarizerIsFine(t *testing.T) {
 // not take the whole job with it.
 func TestAFailingSummarizerDoesNotFailTheJob(t *testing.T) {
 	mockSummarizer := test_utils.NewMockSummarizingService(t)
-	mockSummarizer.EXPECT().Submit(mock.Anything).Return(fmt.Errorf("connection refused"))
+	mockSummarizer.EXPECT().Submit(mock.Anything, mock.Anything).Return(fmt.Errorf("connection refused"))
 
 	job := cookedJob(&processing_common.SummaryOpt{CampaignId: 28, EpisodeId: 11})
 	err := cookOnly(t, Addons{Summarizer: mockSummarizer}, []string{"cooked.ogg"}, job)

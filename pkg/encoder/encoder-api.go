@@ -1,6 +1,7 @@
 package encoder
 
 import (
+	"context"
 	"fmt"
 	"math"
 	processing_common "processing-orchestrator/pkg/processing-common"
@@ -9,7 +10,7 @@ import (
 )
 
 type EncodingService interface {
-	Encode(jobId string, audioKeys []string, bgAudioKey string) (string, error)
+	Encode(ctx context.Context, jobId string, audioKeys []string, bgAudioKey string) (string, error)
 }
 
 const (

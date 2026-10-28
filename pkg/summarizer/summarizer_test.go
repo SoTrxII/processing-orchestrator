@@ -38,7 +38,7 @@ func TestSubmitSpeaksTheEndpointsLanguage(t *testing.T) {
 	invoker := &recordingInvoker{}
 	s := NewSummarizer(invoker, "summary-orchestrator")
 
-	err := s.Submit(&SummaryJob{
+	err := s.Submit(context.Background(), &SummaryJob{
 		JobId:      "job-1",
 		CampaignId: 28,
 		EpisodeId:  11,
@@ -67,7 +67,7 @@ func TestSubmitReportsAnUnreachableSummarizer(t *testing.T) {
 	invoker := &recordingInvoker{err: fmt.Errorf("connection refused")}
 	s := NewSummarizer(invoker, "summary-orchestrator")
 
-	err := s.Submit(&SummaryJob{JobId: "job-1"})
+	err := s.Submit(context.Background(), &SummaryJob{JobId: "job-1"})
 	assert.ErrorContains(t, err, "job-1")
 	assert.ErrorContains(t, err, "connection refused")
 }
@@ -79,7 +79,7 @@ func TestSubmitOmitsGameMastersWhenThereAreNone(t *testing.T) {
 	invoker := &recordingInvoker{}
 	s := NewSummarizer(invoker, "summary-orchestrator")
 
-	assert.NoError(t, s.Submit(&SummaryJob{JobId: "job-1", CampaignId: 28, EpisodeId: 11}))
+	assert.NoError(t, s.Submit(context.Background(), &SummaryJob{JobId: "job-1", CampaignId: 28, EpisodeId: 11}))
 
 	var sent map[string]any
 	assert.NoError(t, json.Unmarshal(invoker.content.Data, &sent))
@@ -93,7 +93,7 @@ func TestSubmitCarriesGameMasters(t *testing.T) {
 	invoker := &recordingInvoker{}
 	s := NewSummarizer(invoker, "summary-orchestrator")
 
-	assert.NoError(t, s.Submit(&SummaryJob{
+	assert.NoError(t, s.Submit(context.Background(), &SummaryJob{
 		JobId:         "job-1",
 		CampaignId:    28,
 		EpisodeId:     11,
@@ -111,7 +111,7 @@ func TestSubmitCarriesDeclaredCharacters(t *testing.T) {
 	invoker := &recordingInvoker{}
 	s := NewSummarizer(invoker, "summary-orchestrator")
 
-	assert.NoError(t, s.Submit(&SummaryJob{
+	assert.NoError(t, s.Submit(context.Background(), &SummaryJob{
 		JobId:      "job-1",
 		Characters: []processing_common.Character{{Name: "Kit", Player: "sotrx"}},
 	}))
@@ -119,7 +119,7 @@ func TestSubmitCarriesDeclaredCharacters(t *testing.T) {
 	assert.NoError(t, json.Unmarshal(invoker.content.Data, &sent))
 	assert.Equal(t, []any{map[string]any{"name": "Kit", "player": "sotrx"}}, sent["characters"])
 
-	assert.NoError(t, s.Submit(&SummaryJob{JobId: "job-2"}))
+	assert.NoError(t, s.Submit(context.Background(), &SummaryJob{JobId: "job-2"}))
 	sent = map[string]any{}
 	assert.NoError(t, json.Unmarshal(invoker.content.Data, &sent))
 	assert.NotContains(t, sent, "characters")
