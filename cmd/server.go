@@ -295,6 +295,12 @@ func DI(subServer common.Service, env *env) (*record_processor.RecordProcessor, 
 	}
 	if env.daprCpnSummary != "" {
 		addons.Summarizer = summarizer.NewSummarizer(daprClient, env.daprCpnSummary)
+		// Same addon, its second half: once a summary is announced, its
+		// chapters go on the video this job uploaded.
+		chapters := summarizer.NewChapterPublisher(daprClient, env.daprCpnSummary, env.daprCpnUploader, env.daprCpnSub, store)
+		if err := chapters.SubscribeTo(subServer); err != nil {
+			return nil, nil, err
+		}
 	} else {
 		slog.Info("[Main] :: No summarizer configured, recordings will not be summarized")
 	}
